@@ -35,7 +35,7 @@ export function createZone(zone, vlan) {
   // interior lo desplaza para alinear el texto a la izquierda desde la esquina
   el.innerHTML = `<span><b>VLAN ${vlan.id}</b> ${zone.label}<small>${vlan.subnet}</small></span>`;
   const label = new CSS2DObject(el);
-  label.position.set(-width / 2 + 0.1, 0.02, -depth / 2 - 0.45);
+  label.position.set(-width / 2 + 0.1, 0.02, depth / 2 + 0.5);
   group.add(label);
 
   return group;

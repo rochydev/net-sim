@@ -7,8 +7,8 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { SCENE_COLORS } from './theme.js';
 
-const HOME_POSITION = new THREE.Vector3(0, 12.5, 17.5);
-const HOME_TARGET = new THREE.Vector3(0, 0, -2.8);
+const HOME_POSITION = new THREE.Vector3(-0.6, 22, 24);
+const HOME_TARGET = new THREE.Vector3(-0.6, 0, -2.6);
 
 // Infraestructura 3D genérica: escena, cámara, luces, render loop y post-procesado.
 // No sabe nada de redes; los demás módulos se enganchan con onUpdate().
@@ -55,7 +55,7 @@ export class SceneManager {
   }
 
   #createCamera() {
-    this.camera = new THREE.PerspectiveCamera(42, 1, 0.1, 200);
+    this.camera = new THREE.PerspectiveCamera(38, 1, 0.1, 200);
     this.camera.position.set(0, 34, 46); // arranca lejos para la animación de entrada
 
     this.controls = new OrbitControls(this.camera, this.renderer.domElement);
