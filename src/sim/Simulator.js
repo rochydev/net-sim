@@ -30,6 +30,11 @@ export class Simulator {
   async send(packet, fromId) {
     const trace = this.engine.trace(packet, fromId);
     this.events.emit('trace', { packet, trace, from: fromId });
+    // Los firewalls que han evaluado políticas han cambiado sus contadores
+    for (const node of trace) {
+      if (node.data.policy !== undefined || node.notes.some((n) => n.type === 'policy'))
+        this.deviceChanged(node.device);
+    }
     await this.player.play(packet, trace);
     return trace;
   }
@@ -50,6 +55,11 @@ export class Simulator {
 
   setServiceRunning(deviceId, service, running) {
     this.engine.setServiceRunning(deviceId, service, running);
+    this.deviceChanged(deviceId);
+  }
+
+  setPolicyEnabled(deviceId, policyId, enabled) {
+    this.engine.setPolicyEnabled(deviceId, policyId, enabled);
     this.deviceChanged(deviceId);
   }
 

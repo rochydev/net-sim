@@ -22,6 +22,8 @@ describe('escenarios', () => {
         for await (const text of shell.run(deviceId, line)) output.push(text);
       },
       focus: () => {},
+      select: () => {},
+      setPolicyEnabled: (id, policy, enabled) => sim.setPolicyEnabled(id, policy, enabled),
       setDeviceUp: (id, up) => sim.setDeviceUp(id, up),
       setServiceRunning: (id, service, running) => sim.setServiceRunning(id, service, running),
       note: () => {},
@@ -79,6 +81,18 @@ describe('escenarios', () => {
     );
     expect(output).toContain('*** Se agotó el tiempo de espera de la solicitud a UnKnown.');
     expect(output.filter((l) => l.startsWith('Respuesta desde 93.184.215.14'))).toHaveLength(2);
+  });
+
+  it('firewall: bloqueado por el deny implícito, permitido con la política #5 y vuelta a cerrar', async () => {
+    await run('firewall');
+    const timeouts = output.filter((l) => l === 'Tiempo de espera agotado para esta solicitud.');
+    const replies = output.filter((l) => l.startsWith('Respuesta desde 192.168.20.11'));
+    expect(timeouts).toHaveLength(2);
+    expect(replies).toHaveLength(2);
+
+    const fw = sim.engine.device('fw');
+    expect(fw.policies.find((p) => p.id === 5)).toMatchObject({ enabled: false, hits: 2 });
+    expect(fw.implicitDenyHits).toBe(2);
   });
 
   it('no deja lanzar un escenario mientras otro está en curso', async () => {

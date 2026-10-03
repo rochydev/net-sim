@@ -7,7 +7,7 @@ import { icon, DEVICE_ICONS } from './icons.js';
 // Lee el estado del motor (no la topología estática) para reflejar cambios en vivo:
 // IPs obtenidas por DHCP, equipos caídos, políticas activadas, concesiones...
 export class DevicePanel {
-  constructor(element, engine, { onClose, onOpenTerminal } = {}) {
+  constructor(element, engine, { onClose, onOpenTerminal, onTogglePolicy } = {}) {
     this.el = element;
     this.engine = engine;
     this.topology = engine.topology;
@@ -17,6 +17,10 @@ export class DevicePanel {
       const action = event.target.closest('[data-action]')?.dataset.action;
       if (action === 'close') onClose?.();
       if (action === 'terminal') onOpenTerminal?.(this.deviceId);
+    });
+    this.el.addEventListener('change', (event) => {
+      const toggle = event.target.closest('[data-policy]');
+      if (toggle) onTogglePolicy?.(this.deviceId, Number(toggle.dataset.policy), toggle.checked);
     });
   }
 
@@ -144,14 +148,16 @@ export class DevicePanel {
   #policies(state) {
     const rows = state.policies.map((p) => [
       mono(`#${p.id}`),
-      `${p.name}<small>${p.srcintf.join(', ')} → ${p.dstintf.join(', ')} · ${p.service.join(', ')}${p.nat ? ' · NAT' : ''}</small>`,
-      p.enabled
-        ? `<span class="chip chip--accept">${p.action.toUpperCase()}</span>`
-        : '<span class="chip chip--off">Desactivada</span>',
+      `${p.name}<small>${p.srcintf.join(', ')} → ${p.dstintf.join(', ')} · ${p.service.join(', ')}${p.nat ? ' · NAT' : ''}</small><small>${hits(p.hits)}</small>`,
+      `<label class="toggle" title="${p.enabled ? 'Desactivar' : 'Activar'} la política #${p.id}">
+        <input type="checkbox" data-policy="${p.id}" aria-label="Política #${p.id}: ${p.name}" ${p.enabled ? 'checked' : ''} />
+        <span class="toggle__track"></span>
+        <span class="toggle__label">${p.enabled ? p.action.toUpperCase() : 'OFF'}</span>
+      </label>`,
     ]);
     rows.push([
       mono('#0'),
-      'Política implícita<small>todo lo demás</small>',
+      `Política implícita<small>todo lo demás</small><small>${hits(state.implicitDenyHits)}</small>`,
       '<span class="chip chip--deny">DENY</span>',
     ]);
     return section('Políticas de firewall', table(rows, 'kv kv--policies'));
@@ -175,6 +181,7 @@ export class DevicePanel {
 }
 
 const mono = (text) => `<code>${text}</code>`;
+const hits = (count) => (count === 1 ? '1 acierto' : `${count} aciertos`);
 const section = (title, content) => `<section class="panel__section"><h3>${title}</h3>${content}</section>`;
 const table = (rows, className = 'kv') =>
   `<table class="${className}">${rows.map((cells) => `<tr>${cells.map((c) => `<td>${c}</td>`).join('')}</tr>`).join('')}</table>`;
