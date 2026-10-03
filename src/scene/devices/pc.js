@@ -22,7 +22,7 @@ export function createPC({ accent }) {
   place(g, box(0.92, 0.52, 0.04, mat(PALETTE.body)), 0, deskH + 0.5, -0.2);
   const screen = place(
     g,
-    new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.46), glow(accent, 1.5)),
+    new THREE.Mesh(new THREE.PlaneGeometry(0.86, 0.46), glow(accent, 0.55)),
     0,
     deskH + 0.5,
     -0.179,
@@ -34,7 +34,7 @@ export function createPC({ accent }) {
 
   // Torre con LED de encendido
   place(g, box(0.22, 0.46, 0.46, mat(PALETTE.body)), 0.55, 0.23, -0.05);
-  const led = place(g, box(0.03, 0.03, 0.01, glow('#22d3ee', 3)), 0.55, 0.4, 0.185);
+  const led = place(g, box(0.03, 0.03, 0.01, glow('#7fb8d6', 1.2)), 0.55, 0.4, 0.185);
 
   return {
     group: g,

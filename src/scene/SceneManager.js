@@ -5,8 +5,8 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { SCENE_COLORS } from './theme.js';
 
-const BACKGROUND = 0x070b14;
 const HOME_POSITION = new THREE.Vector3(0, 12.5, 17.5);
 const HOME_TARGET = new THREE.Vector3(0, 0, -2.8);
 
@@ -35,9 +35,9 @@ export class SceneManager {
 
   #createScene() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(BACKGROUND);
+    this.scene.background = new THREE.Color(SCENE_COLORS.background);
     // La niebla del mismo color que el fondo difumina el borde del suelo
-    this.scene.fog = new THREE.Fog(BACKGROUND, 32, 75);
+    this.scene.fog = new THREE.Fog(SCENE_COLORS.background, 32, 75);
   }
 
   #createRenderers() {
@@ -76,9 +76,9 @@ export class SceneManager {
   }
 
   #createLights() {
-    this.scene.add(new THREE.HemisphereLight(0x8fb3ff, 0x0b0f1a, 0.9));
+    this.scene.add(new THREE.HemisphereLight(0xdde4ee, 0x0b0d10, 0.85));
 
-    const key = new THREE.DirectionalLight(0xffffff, 2.2);
+    const key = new THREE.DirectionalLight(0xfff6ea, 2.1);
     key.position.set(12, 22, 14);
     key.castShadow = true;
     key.shadow.mapSize.set(2048, 2048);
@@ -86,8 +86,8 @@ export class SceneManager {
     Object.assign(key.shadow.camera, { left: -22, right: 22, top: 22, bottom: -22, near: 1, far: 70 });
     this.scene.add(key);
 
-    // Luz de contra azulada para separar los equipos del fondo
-    const rim = new THREE.DirectionalLight(0x4f7cff, 0.8);
+    // Luz de contra fría y suave para separar los equipos del fondo
+    const rim = new THREE.DirectionalLight(0x9fb3c8, 0.45);
     rim.position.set(-14, 10, -18);
     this.scene.add(rim);
   }
@@ -95,13 +95,13 @@ export class SceneManager {
   #createFloor() {
     const floor = new THREE.Mesh(
       new THREE.PlaneGeometry(120, 120),
-      new THREE.MeshStandardMaterial({ color: 0x0c1220, roughness: 0.95, metalness: 0 }),
+      new THREE.MeshStandardMaterial({ color: SCENE_COLORS.floor, roughness: 0.95, metalness: 0 }),
     );
     floor.rotation.x = -Math.PI / 2;
     floor.receiveShadow = true;
     this.scene.add(floor);
 
-    const grid = new THREE.GridHelper(120, 120, 0x1b2740, 0x121a2c);
+    const grid = new THREE.GridHelper(120, 120, SCENE_COLORS.gridMajor, SCENE_COLORS.gridMinor);
     grid.position.y = 0.002;
     this.scene.add(grid);
   }
@@ -112,8 +112,8 @@ export class SceneManager {
     this.composer = new EffectComposer(this.renderer, target);
     this.composer.addPass(new RenderPass(this.scene, this.camera));
 
-    // Bloom: solo brillan los colores por encima del umbral (pantallas, LEDs, paquetes)
-    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.55, 0.5, 0.82);
+    // Bloom muy contenido: solo un halo leve en paquetes y LEDs, por encima del umbral
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.22, 0.35, 0.9);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
   }

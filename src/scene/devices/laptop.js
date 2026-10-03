@@ -17,7 +17,7 @@ export function createLaptop({ accent }) {
   lid.position.set(0, deskH + 0.05, -0.12);
   lid.rotation.x = -0.32;
   place(lid, box(0.5, 0.32, 0.02, aluminium), 0, 0.16, 0);
-  const screen = place(lid, new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.27), glow(accent, 1.5)), 0, 0.16, 0.011);
+  const screen = place(lid, new THREE.Mesh(new THREE.PlaneGeometry(0.45, 0.27), glow(accent, 0.55)), 0, 0.16, 0.011);
   g.add(lid);
 
   return {

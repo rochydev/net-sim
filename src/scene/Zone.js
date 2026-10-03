@@ -15,7 +15,7 @@ export function createZone(zone, vlan) {
 
   const fill = new THREE.Mesh(
     plane,
-    new THREE.MeshBasicMaterial({ color: vlan.color, transparent: true, opacity: 0.07, depthWrite: false }),
+    new THREE.MeshBasicMaterial({ color: vlan.color, transparent: true, opacity: 0.045, depthWrite: false }),
   );
   fill.position.y = 0.006;
   fill.raycast = () => {};
@@ -23,7 +23,7 @@ export function createZone(zone, vlan) {
 
   const border = new THREE.LineSegments(
     new THREE.EdgesGeometry(plane),
-    new THREE.LineBasicMaterial({ color: vlan.color, transparent: true, opacity: 0.55 }),
+    new THREE.LineBasicMaterial({ color: vlan.color, transparent: true, opacity: 0.32 }),
   );
   border.position.y = 0.01;
   group.add(border);

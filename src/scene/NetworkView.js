@@ -3,13 +3,8 @@ import { Emitter } from '../core/Emitter.js';
 import { DeviceMesh } from './DeviceMesh.js';
 import { Cable } from './Cable.js';
 import { createZone } from './Zone.js';
-import { CABLE_COLORS } from './theme.js';
+import { CABLE_COLORS, DEVICE_ACCENTS } from './theme.js';
 
-const TYPE_ACCENTS = {
-  cloud: '#60a5fa',
-  firewall: '#ef4444',
-  switch: '#cbd5e1',
-};
 const LANE_GAP = 0.13;
 
 // Traduce la topología (datos) a objetos 3D y gestiona la interacción con ellos.
@@ -41,7 +36,7 @@ export class NetworkView {
   }
 
   accentFor(device) {
-    return TYPE_ACCENTS[device.type] ?? this.vlan(device.vlan)?.color ?? '#94a3b8';
+    return DEVICE_ACCENTS[device.type] ?? this.vlan(device.vlan)?.color ?? '#94a3b8';
   }
 
   getDevice(id) {

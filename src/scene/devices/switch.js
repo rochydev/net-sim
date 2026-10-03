@@ -15,7 +15,7 @@ export function createSwitch() {
   for (let i = 0; i < 24; i++) {
     const row = i % 2;
     const col = Math.floor(i / 2);
-    const led = place(g, box(0.07, 0.035, 0.01, glow('#4ade80', 2.4)), -0.6 + col * 0.09, y + 0.025 - row * 0.05, 0.28);
+    const led = place(g, box(0.07, 0.035, 0.01, glow('#8cc98f', 1.1)), -0.6 + col * 0.09, y + 0.025 - row * 0.05, 0.28);
     leds.push(led.material);
   }
 

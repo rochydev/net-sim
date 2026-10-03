@@ -4,9 +4,9 @@ import * as THREE from 'three';
 export function createCloud() {
   const g = new THREE.Group();
   const material = new THREE.MeshStandardMaterial({
-    color: '#b8c7ff',
-    emissive: '#3b5bdb',
-    emissiveIntensity: 0.35,
+    color: '#c3cbd6',
+    emissive: '#1d2635',
+    emissiveIntensity: 0.4,
     roughness: 0.8,
     flatShading: true,
   });
