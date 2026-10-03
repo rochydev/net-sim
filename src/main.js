@@ -6,11 +6,16 @@ import { SceneManager } from './scene/SceneManager.js';
 import { NetworkView } from './scene/NetworkView.js';
 import { Effects } from './scene/Effects.js';
 import { PacketAnimator } from './scene/PacketAnimator.js';
+import { ScenarioRunner } from './scenarios/ScenarioRunner.js';
+import { scenarios } from './scenarios/index.js';
 import { DevicePanel } from './ui/DevicePanel.js';
 import { Terminal } from './ui/Terminal.js';
 import { PacketCapture } from './ui/PacketCapture.js';
+import { ScenarioMenu } from './ui/ScenarioMenu.js';
+import { Caption } from './ui/Caption.js';
 import { Dock } from './ui/Dock.js';
 import { Legend } from './ui/Legend.js';
+import { icon } from './ui/icons.js';
 
 // Punto de entrada: crea las piezas y las conecta. No contiene lógica propia.
 
@@ -26,14 +31,6 @@ sim.setPlayer(animator);
 // Interfaz
 const terminal = new Terminal(document.createElement('div'), sim);
 const capture = new PacketCapture(document.createElement('div'), sim);
-const dock = new Dock(document.getElementById('dock'), [
-  { id: 'terminal', label: 'Terminal', content: terminal.el },
-  { id: 'capture', label: 'Captura', content: capture.el },
-]);
-capture.onChange = (count) => dock.setBadge('capture', count || '');
-
-new Legend(document.getElementById('legend'), { onSpeedChange: (speed) => (animator.speed = speed) });
-
 const panel = new DevicePanel(document.getElementById('device-panel'), sim.engine, {
   onClose: () => view.select(null),
   onOpenTerminal: (deviceId) => {
@@ -42,6 +39,47 @@ const panel = new DevicePanel(document.getElementById('device-panel'), sim.engin
     terminal.focus();
   },
 });
+
+// Escenarios: la única vía por la que actúan es este contexto
+const runner = new ScenarioRunner({
+  prepare: async () => {
+    sim.reset();
+    capture.clear();
+  },
+  command: async (deviceId, line) => {
+    terminal.setDevice(deviceId);
+    dock.select('terminal');
+    await terminal.run(line);
+  },
+  focus: (deviceId) => sceneManager.focusOn(view.getDevice(deviceId).focusPoint),
+  setDeviceUp: (deviceId, up) => sim.setDeviceUp(deviceId, up),
+  wait: (ms) => sim.wait(ms),
+});
+runner.events.on('start', () => terminal.setLocked(true));
+runner.events.on('end', () => terminal.setLocked(false));
+
+const scenarioMenu = new ScenarioMenu(document.createElement('div'), runner, scenarios, {
+  onReset: () => sim.reset(),
+});
+new Caption(document.getElementById('caption'), runner);
+
+const dock = new Dock(document.getElementById('dock'), [
+  { id: 'scenarios', label: 'Escenarios', icon: 'scenarios', content: scenarioMenu.el },
+  { id: 'terminal', label: 'Terminal', icon: 'terminal', content: terminal.el },
+  { id: 'capture', label: 'Captura', icon: 'activity', content: capture.el },
+]);
+capture.onChange = (count) => dock.setBadge('capture', count || '');
+
+new Legend(document.getElementById('legend'), { onSpeedChange: (speed) => (animator.speed = speed) });
+document.getElementById('brand-mark').innerHTML = icon('network', 17);
+
+// La vista y el panel reflejan los cambios de estado del simulador
+const syncDevice = (id) => {
+  view.getDevice(id).sync(sim.engine.device(id));
+  panel.refresh(id);
+};
+sim.events.on('device', ({ id }) => syncDevice(id));
+sim.events.on('reset', () => view.devices.forEach((_, id) => syncDevice(id)));
 
 view.events.on('select', (id) => {
   if (!id) return panel.hide();

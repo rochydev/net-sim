@@ -1,4 +1,6 @@
-// Panel inferior con pestañas (Terminal / Captura) que se puede plegar
+import { icon } from './icons.js';
+
+// Panel inferior con pestañas (Escenarios / Terminal / Captura) que se puede plegar
 // para dejar la escena despejada, por ejemplo al grabar un vídeo.
 export class Dock {
   constructor(element, tabs) {
@@ -10,10 +12,10 @@ export class Dock {
         ${tabs
           .map(
             (tab) =>
-              `<button type="button" role="tab" class="dock__tab" data-tab="${tab.id}">${tab.label}<span class="dock__badge" hidden></span></button>`,
+              `<button type="button" role="tab" class="dock__tab" data-tab="${tab.id}">${icon(tab.icon, 15)}${tab.label}<span class="dock__badge" hidden></span></button>`,
           )
           .join('')}
-        <button type="button" class="dock__toggle" aria-label="Plegar panel" title="Plegar panel">▾</button>
+        <button type="button" class="icon-button dock__toggle" aria-label="Plegar panel" title="Plegar panel">${icon('chevronDown', 16)}</button>
       </div>
       <div class="dock__body"></div>
     `;

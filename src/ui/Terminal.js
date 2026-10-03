@@ -34,6 +34,7 @@ export class Terminal {
 
   setDevice(deviceId) {
     if (this.running || !this.canUse(deviceId)) return;
+    if (deviceId === this.deviceId && this.screens.has(deviceId)) return;
     this.select.value = deviceId;
     if (!this.screens.has(deviceId)) {
       this.screens.set(
@@ -48,6 +49,12 @@ export class Terminal {
 
   focus() {
     this.input.focus();
+  }
+
+  // Mientras un escenario usa la terminal, el usuario no puede escribir ni cambiar de equipo
+  setLocked(locked) {
+    this.locked = locked;
+    this.#setBusy(locked || Boolean(this.running));
   }
 
   async run(line) {
@@ -71,7 +78,7 @@ export class Terminal {
     } finally {
       this.#print(deviceId, '');
       this.running = null;
-      this.#setBusy(false);
+      this.#setBusy(Boolean(this.locked));
     }
   }
 
@@ -101,7 +108,7 @@ export class Terminal {
 
     this.el.querySelector('form').addEventListener('submit', (event) => {
       event.preventDefault();
-      if (this.running) return;
+      if (this.running || this.locked) return;
       const line = this.input.value;
       this.input.value = '';
       this.run(line);
@@ -143,7 +150,7 @@ export class Terminal {
 
   #renderSuggestions() {
     this.suggestions.innerHTML = this.#suggestionsFor(this.deviceId)
-      .map((command) => `<button type="button" class="chip-button" data-command="${command}">${command}</button>`)
+      .map((command) => `<button type="button" class="command-chip" data-command="${command}">${command}</button>`)
       .join('');
   }
 
@@ -173,7 +180,7 @@ export class Terminal {
   #setBusy(busy) {
     this.el.classList.toggle('is-busy', busy);
     this.select.disabled = busy;
-    this.status.textContent = busy ? 'Ejecutando… (Ctrl+C para cancelar)' : '';
+    this.status.textContent = this.locked ? 'Escenario en curso' : busy ? 'Ejecutando… (Ctrl+C para cancelar)' : '';
     this.input.readOnly = busy;
     this.suggestions.querySelectorAll('button').forEach((b) => (b.disabled = busy));
   }
