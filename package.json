@@ -1,0 +1,28 @@
+{
+  "name": "network-sim-3d",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Simulador 3D de red: paquetes viajando entre dispositivos y escenarios de soporte (ping, DHCP, DNS, VLANs, firewall).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "dependencies": {
+    "three": "^0.186.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.12.0",
+    "globals": "^17.13.0",
+    "prettier": "^3.9.9",
+    "vite": "^8.3.2",
+    "vitest": "^5.0.3"
+  }
+}
