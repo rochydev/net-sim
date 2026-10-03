@@ -1,5 +1,6 @@
 import { traceroute } from '../../protocols/icmp.js';
-import { isIpv4, traceTime } from '../format.js';
+import { resolveName } from '../../protocols/dns.js';
+import { traceTime } from '../format.js';
 
 const MAX_HOPS = 30;
 
@@ -9,17 +10,23 @@ export async function* tracert({ sim, deviceId, args, signal }) {
     yield 'Uso: tracert nombre_destino';
     return;
   }
-  if (!isIpv4(target)) {
+  const resolved = await resolveName(sim, deviceId, target);
+  if (resolved.status !== 'resolved') {
     yield `No se puede resolver el nombre de sistema de destino ${target}.`;
     return;
   }
 
   yield '';
-  yield `Traza a ${target} sobre caminos de ${MAX_HOPS} saltos como máximo.`;
+  if (resolved.name === resolved.ip) {
+    yield `Traza a ${resolved.ip} sobre caminos de ${MAX_HOPS} saltos como máximo.`;
+  } else {
+    yield `Traza a la dirección ${resolved.name} [${resolved.ip}]`;
+    yield `sobre un máximo de ${MAX_HOPS} saltos:`;
+  }
   yield '';
 
   let completed = false;
-  for await (const result of traceroute(sim, deviceId, target, { maxHops: MAX_HOPS, signal })) {
+  for await (const result of traceroute(sim, deviceId, resolved.ip, { maxHops: MAX_HOPS, signal })) {
     yield row(sim, result);
     completed = result.status === 'reply';
   }

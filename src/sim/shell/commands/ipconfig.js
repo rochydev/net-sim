@@ -12,6 +12,19 @@ export async function* ipconfig({ sim, deviceId, args }) {
   const option = args[0]?.toLowerCase();
   const device = sim.engine.device(deviceId);
 
+  if (option === '/flushdns') {
+    device.dnsCache.clear();
+    yield '';
+    yield 'Configuración IP de Windows';
+    yield '';
+    yield 'Se vació correctamente la caché de resolución de DNS.';
+    return;
+  }
+  if (option === '/displaydns') {
+    yield* displayDns(device);
+    return;
+  }
+
   if (option === '/release' || option === '/renew') {
     const result = option === '/release' ? await release(sim, deviceId) : await renew(sim, deviceId);
     yield '';
@@ -41,7 +54,7 @@ export async function* ipconfig({ sim, deviceId, args }) {
   yield '';
   if (all) {
     yield dotted('Nombre de host', device.name, 32);
-    yield dotted('Sufijo DNS principal', dnsSuffix(sim, device), 32);
+    yield dotted('Sufijo DNS principal', dnsSuffix(device), 32);
     yield dotted('Tipo de nodo', 'híbrido', 32);
     yield dotted('Enrutamiento IP habilitado', 'no', 32);
     yield '';
@@ -56,7 +69,7 @@ function* adapter(sim, device, all) {
 
   yield 'Adaptador de Ethernet Ethernet:';
   yield '';
-  yield dotted('Sufijo DNS específico para la conexión', iface.ip && !apipa ? dnsSuffix(sim, device) : '');
+  yield dotted('Sufijo DNS específico para la conexión', iface.ip && !apipa ? dnsSuffix(device) : '');
   if (all) {
     yield dotted('Descripción', NIC_MODEL[device.type]);
     yield dotted('Dirección física', dashedMac(iface.mac));
@@ -75,5 +88,25 @@ function* adapter(sim, device, all) {
   }
 }
 
-// Los equipos de invitados no están unidos al dominio
-const dnsSuffix = (sim, device) => (device.type === 'laptop' ? '' : sim.topology.domain);
+function* displayDns(device) {
+  yield '';
+  yield 'Configuración IP de Windows';
+  yield '';
+  if (!device.dnsCache.size) {
+    yield 'No se pudo mostrar la caché de resolución de DNS.';
+    return;
+  }
+  for (const [name, entry] of device.dnsCache) {
+    yield `    ${name}`;
+    yield '    ----------------------------------------';
+    yield `    Nombre de registro . : ${name}`;
+    yield '    Tipo de registro . . : 1';
+    yield `    Tiempo de vida . . . : ${entry.ttl ?? 3600}`;
+    yield '    Longitud de datos . .: 4';
+    yield '    Sección . . . . . . .: respuesta';
+    yield `    Un registro (host) . : ${entry.ip}`;
+    yield '';
+  }
+}
+
+const dnsSuffix = (device) => device.config.domain ?? '';

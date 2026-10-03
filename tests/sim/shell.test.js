@@ -52,8 +52,8 @@ describe('Shell', () => {
   });
 
   it('rechaza comandos desconocidos con el mensaje de cmd.exe', async () => {
-    expect(await run('pc1', 'nslookup')).toEqual([
-      '"nslookup" no se reconoce como un comando interno o externo,',
+    expect(await run('pc1', 'netsh')).toEqual([
+      '"netsh" no se reconoce como un comando interno o externo,',
       'programa o archivo por lotes ejecutable.',
     ]);
   });

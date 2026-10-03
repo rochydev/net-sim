@@ -21,10 +21,12 @@ export const topology = {
       interfaces: [{ name: 'isp', port: 'ISP', ip: '203.0.113.1', prefix: 30, mac: '00:00:5E:00:01:01' }],
       // Routers que atraviesa un paquete dentro de Internet (los verá tracert)
       route: ['203.0.113.1', '198.51.100.17', '198.51.100.94'],
+      // Hosts públicos. Los marcados como resolver responden consultas DNS sobre estos mismos nombres.
       hosts: [
-        { name: 'dns.google', ip: '8.8.8.8' },
-        { name: 'one.one.one.one', ip: '1.1.1.1' },
+        { name: 'dns.google', ip: '8.8.8.8', resolver: true },
+        { name: 'one.one.one.one', ip: '1.1.1.1', resolver: true },
         { name: 'www.example.com', ip: '93.184.215.14' },
+        { name: 'portal.proveedor.es', ip: '198.51.100.80' },
       ],
     },
     {
@@ -122,6 +124,24 @@ export const topology = {
       name: 'SRV-DC01',
       model: 'Windows Server 2022',
       roles: ['AD DS', 'DHCP', 'DNS'],
+      // DNS integrado en Active Directory: autoritativo para nave.local y reenviador
+      // hacia Internet para el resto de nombres (consulta recursiva en nombre del cliente)
+      dnsServer: {
+        forwarders: ['8.8.8.8'],
+        zones: {
+          'nave.local': {
+            'srv-dc01': '192.168.50.10',
+            intranet: '192.168.50.10',
+            'fw-01': '192.168.50.1',
+            'sw-core-01': '192.168.50.2',
+            'pc-ofi-01': '192.168.10.101',
+            'pc-ofi-02': '192.168.10.102',
+            'pc-ofi-03': '192.168.10.103',
+            'plc-linea-01': '192.168.20.11',
+            'cnc-01': '192.168.20.12',
+          },
+        },
+      },
       // Ámbitos DHCP: el servidor elige uno según la interfaz del relay (giaddr) que le reenvía la petición
       dhcp: {
         leaseHours: 8,
@@ -150,6 +170,7 @@ export const topology = {
       prefix: 24,
       gateway: '192.168.50.1',
       dns: '192.168.50.10',
+      domain: 'nave.local',
       mac: '00:15:5D:32:0A:10',
       addressing: 'static',
     },
@@ -163,6 +184,7 @@ export const topology = {
       prefix: 24,
       gateway: '192.168.10.1',
       dns: '192.168.50.10',
+      domain: 'nave.local',
       mac: 'D4:81:D7:1A:22:01',
       addressing: 'dhcp',
     },
@@ -176,6 +198,7 @@ export const topology = {
       prefix: 24,
       gateway: '192.168.10.1',
       dns: '192.168.50.10',
+      domain: 'nave.local',
       mac: 'D4:81:D7:1A:22:02',
       addressing: 'dhcp',
     },
@@ -189,6 +212,7 @@ export const topology = {
       prefix: 24,
       gateway: '192.168.10.1',
       dns: '192.168.50.10',
+      domain: 'nave.local',
       mac: 'D4:81:D7:1A:22:03',
       addressing: 'dhcp',
     },

@@ -1,9 +1,5 @@
-const IPV4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
-
-export const isIpv4 = (text) => IPV4.test(text);
-
 // Windows escribe "tiempo<1m" por debajo de un milisegundo y "tiempo=12ms" por encima
-export const pingTime = (ms) => (ms < 1 ? 'tiempo<1m' : `tiempo=${Math.round(ms)}ms`);
+export const pingTime = (ms) => (ms < 1 ? 'tiempo<1m' : `tiempo=${Math.floor(ms)}ms`);
 
 // Columna de tiempo de tracert, de 9 caracteres: "    <1 ms", "   12 ms", "     *   "
 export const traceTime = (ms) => (ms == null ? '     *   ' : (ms < 1 ? '<1 ms' : `${Math.round(ms)} ms`).padStart(9));

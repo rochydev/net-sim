@@ -21,6 +21,8 @@ const TITLES = {
   'dhcp:ack': 'DHCP ACK',
   'dhcp:nak': 'DHCP NAK',
   'dhcp:release': 'DHCP Release',
+  'dns:query': 'DNS Query',
+  'dns:response': 'DNS Response',
 };
 
 let sequence = 0;
@@ -76,12 +78,20 @@ export class Packet {
         return 'Time-to-live exceeded (Time to live exceeded in transit)';
       case 'icmp:unreachable':
         return 'Destination unreachable (Host unreachable)';
+      case 'dns:query':
+        return `Standard query ${hex(payload.txid, 4)} A ${payload.qname}`;
+      case 'dns:response':
+        return payload.rcode === 'NXDOMAIN'
+          ? `Standard query response ${hex(payload.txid, 4)} No such name A ${payload.qname}`
+          : `Standard query response ${hex(payload.txid, 4)} A ${payload.qname} A ${payload.answer}`;
       default:
         if (this.protocol === 'dhcp') {
-          const xid = `0x${payload.xid.toString(16).padStart(8, '0')}`;
+          const xid = hex(payload.xid, 8);
           return `${this.title} - Transaction ID ${xid}${payload.yiaddr ? ` (IP ofrecida ${payload.yiaddr})` : ''}`;
         }
         return this.title;
     }
   }
 }
+
+const hex = (value, digits) => `0x${value.toString(16).padStart(digits, '0')}`;

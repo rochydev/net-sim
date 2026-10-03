@@ -23,6 +23,8 @@ describe('escenarios', () => {
       },
       focus: () => {},
       setDeviceUp: (id, up) => sim.setDeviceUp(id, up),
+      setServiceRunning: (id, service, running) => sim.setServiceRunning(id, service, running),
+      note: () => {},
       wait: (ms) => sim.wait(ms),
     });
   });
@@ -57,6 +59,26 @@ describe('escenarios', () => {
     expect(text).toContain('PING: error en la transmisión. Error general.');
     expect(sim.engine.device('pc3').ifaces[0].ip).toBe('192.168.10.103');
     expect(sim.engine.device('srv').up).toBe(true);
+  });
+
+  it('dns: interno con autoridad, externo vía reenviador y después desde caché', async () => {
+    const queries = [];
+    sim.events.on('trace', ({ packet, from }) => {
+      if (packet.kind === 'query') queries.push(from);
+    });
+    await run('dns');
+    expect(output).toContain('Haciendo ping a intranet.nave.local [192.168.50.10] con 32 bytes de datos:');
+    expect(output.filter((l) => l.startsWith('Respuesta desde 93.184.215.14'))).toHaveLength(2);
+    expect(queries).toEqual(['pc1', 'pc1', 'srv']);
+  });
+
+  it('fallo de DNS: el nombre falla, la IP responde y al final se recupera', async () => {
+    await run('dns-failure');
+    expect(output).toContain(
+      'La solicitud de ping no pudo encontrar el host www.example.com. Compruebe el nombre y vuelva a intentarlo.',
+    );
+    expect(output).toContain('*** Se agotó el tiempo de espera de la solicitud a UnKnown.');
+    expect(output.filter((l) => l.startsWith('Respuesta desde 93.184.215.14'))).toHaveLength(2);
   });
 
   it('no deja lanzar un escenario mientras otro está en curso', async () => {

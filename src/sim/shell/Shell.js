@@ -2,6 +2,7 @@ import { ping } from './commands/ping.js';
 import { tracert } from './commands/tracert.js';
 import { ipconfig } from './commands/ipconfig.js';
 import { arp } from './commands/arp.js';
+import { nslookup } from './commands/nslookup.js';
 
 const SHELL_TYPES = new Set(['pc', 'laptop', 'server']);
 
@@ -10,6 +11,7 @@ const COMMANDS = {
   tracert,
   ipconfig,
   arp,
+  nslookup,
   help,
 };
 
@@ -56,9 +58,11 @@ async function* help() {
   yield '  ipconfig [/all]          Configuración IP del equipo';
   yield '  ipconfig /release        Libera la concesión DHCP';
   yield '  ipconfig /renew          Pide (o renueva) una IP al servidor DHCP';
-  yield '  ping [-n N] [-t] [-i TTL] <IP>';
+  yield '  ipconfig /flushdns       Vacía la caché DNS (/displaydns la muestra)';
+  yield '  ping [-n N] [-t] [-i TTL] <destino>';
   yield '                           Comprueba la conectividad con otro equipo';
-  yield '  tracert <IP>             Muestra los routers hasta el destino';
+  yield '  tracert <destino>        Muestra los routers hasta el destino';
+  yield '  nslookup <nombre> [DNS]  Consulta un nombre al servidor DNS';
   yield '  arp -a                   Muestra la caché ARP';
   yield '  arp -d *                 Vacía la caché ARP';
   yield '  cls                      Limpia la pantalla';

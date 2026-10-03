@@ -1,7 +1,7 @@
 import { Shell, canRunShell } from '../sim/shell/Shell.js';
 
 const WARNING = /agotado|inaccesible|caducado|no se reconoce|no pudo encontrar|Error general/;
-const MAX_SUGGESTIONS = 7;
+const MAX_SUGGESTIONS = 8;
 const DEVICE_ORDER = ['pc', 'laptop', 'server'];
 
 // Consola del equipo elegido. Solo pinta: los comandos los ejecuta el Shell del simulador.
@@ -170,7 +170,8 @@ export class Terminal {
       neighbour && `ping ${neighbour.ifaces[0].ip}`,
       server && `ping ${server.ifaces[0].ip}`,
       industrial && `ping ${industrial.ifaces[0].ip}`,
-      'ping 8.8.8.8',
+      'ping www.example.com',
+      self.config.domain && 'nslookup intranet',
       'tracert 8.8.8.8',
       'arp -a',
     ].filter(Boolean);

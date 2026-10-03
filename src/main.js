@@ -25,7 +25,8 @@ const sim = new Simulator(topology);
 // Escena 3D: representa la topología y reproduce lo que calcula el simulador
 const sceneManager = new SceneManager(document.getElementById('viewport'));
 const view = new NetworkView(sceneManager, topology, layout);
-const animator = new PacketAnimator(sceneManager, view, new Effects(view));
+const effects = new Effects(view);
+const animator = new PacketAnimator(sceneManager, view, effects);
 sim.setPlayer(animator);
 
 // Interfaz
@@ -53,6 +54,8 @@ const runner = new ScenarioRunner({
   },
   focus: (deviceId) => sceneManager.focusOn(view.getDevice(deviceId).focusPoint),
   setDeviceUp: (deviceId, up) => sim.setDeviceUp(deviceId, up),
+  setServiceRunning: (deviceId, service, running) => sim.setServiceRunning(deviceId, service, running),
+  note: (deviceId, text, tone) => effects.note(deviceId, text, tone),
   wait: (ms) => sim.wait(ms),
 });
 runner.events.on('start', () => terminal.setLocked(true));
