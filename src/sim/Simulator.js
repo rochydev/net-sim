@@ -48,6 +48,11 @@ export class Simulator {
     this.deviceChanged(deviceId);
   }
 
+  setServiceRunning(deviceId, service, running) {
+    this.engine.setServiceRunning(deviceId, service, running);
+    this.deviceChanged(deviceId);
+  }
+
   reset() {
     this.engine.reset();
     this.events.emit('reset');

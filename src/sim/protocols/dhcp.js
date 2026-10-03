@@ -1,6 +1,7 @@
 import { Packet, BROADCAST_MAC, BROADCAST_IP } from '../Packet.js';
 import { ipToInt, intToIp, sameSubnet, isApipa } from '../ip.js';
 import { resolveMac } from './arp.js';
+import { runs } from '../NetworkEngine.js';
 
 const DISCOVER_ATTEMPTS = 3;
 const RETRY_WAIT_MS = 1500;
@@ -116,7 +117,7 @@ async function unicastRenew(sim, client) {
 // y devuelve la respuesta tal como le llega al cliente (o null)
 async function transact(sim, clientId, message) {
   const trace = await sim.send(message, clientId);
-  const atServer = trace.delivered.find((n) => sim.engine.device(n.device).services.has('DHCP'));
+  const atServer = trace.delivered.find((n) => runs(sim.engine.device(n.device), 'DHCP'));
   if (!atServer) return null;
 
   const reply = serve(sim.engine, atServer.device, atServer.frame);

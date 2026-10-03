@@ -1,5 +1,6 @@
 import { ping as sendPings } from '../../protocols/icmp.js';
-import { isIpv4, pingTime } from '../format.js';
+import { resolveName } from '../../protocols/dns.js';
+import { pingTime } from '../format.js';
 
 export async function* ping({ sim, deviceId, args, signal }) {
   const options = parse(args);
@@ -11,17 +12,21 @@ export async function* ping({ sim, deviceId, args, signal }) {
     yield 'Uso: ping [-t] [-n cuenta] [-i TTL] nombre_destino';
     return;
   }
-  if (!isIpv4(options.target)) {
-    // La resolución de nombres llega con el escenario de DNS
+
+  // Antes del primer paquete ICMP, el nombre se traduce a IP (caché local o consulta DNS)
+  const resolved = await resolveName(sim, deviceId, options.target);
+  if (resolved.status !== 'resolved') {
     yield `La solicitud de ping no pudo encontrar el host ${options.target}. Compruebe el nombre y vuelva a intentarlo.`;
     return;
   }
 
-  const target = options.target;
+  const target = resolved.ip;
   const stats = { sent: 0, received: 0, times: [] };
 
   yield '';
-  yield `Haciendo ping a ${target} con 32 bytes de datos:`;
+  yield resolved.name === target
+    ? `Haciendo ping a ${target} con 32 bytes de datos:`
+    : `Haciendo ping a ${resolved.name} [${target}] con 32 bytes de datos:`;
 
   for await (const result of sendPings(sim, deviceId, target, { count: options.count, ttl: options.ttl, signal })) {
     stats.sent++;
@@ -60,7 +65,8 @@ function* summary(target, { sent, received, times }) {
   yield `    Paquetes: enviados = ${sent}, recibidos = ${received}, perdidos = ${lost}`;
   yield `    (${Math.round((lost / sent) * 100)}% perdidos),`;
   if (times.length) {
-    const rounded = times.map(Math.round);
+    // Windows trunca a milisegundos enteros: lo que se ve como "tiempo<1m" cuenta como 0ms
+    const rounded = times.map(Math.floor);
     const avg = Math.round(rounded.reduce((a, b) => a + b, 0) / rounded.length);
     yield 'Tiempos aproximados de ida y vuelta en milisegundos:';
     yield `    Mínimo = ${Math.min(...rounded)}ms, Máximo = ${Math.max(...rounded)}ms, Media = ${avg}ms`;

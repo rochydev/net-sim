@@ -11,6 +11,14 @@ const INITIAL_TTL = { pc: 128, laptop: 128, server: 128, industrial: 30, switch:
 
 const ROLES = { switch: 'switch', firewall: 'router', cloud: 'cloud' };
 
+// Servicios que escuchan en un puerto: si están detenidos, lo que llega se pierde
+const SERVICE_PORTS = {
+  dns: { service: 'DNS', port: 'UDP 53', kinds: new Set(['query']) },
+  dhcp: { service: 'DHCP', port: 'UDP 67', kinds: DHCP_CLIENT_KINDS },
+};
+
+export const runs = (device, service) => device.services.get(service) === true;
+
 // Motor de red: dado un paquete y el equipo que lo emite, calcula por dónde
 // viaja y qué le pasa en cada equipo. Es síncrono y no sabe nada de la parte visual;
 // la animación reproduce después la traza que devuelve trace().
@@ -67,6 +75,11 @@ export class NetworkEngine {
     const iface = this.device(deviceId).ifaces[0];
     if (!iface?.ip) return null;
     return sameSubnet(iface.ip, dstIp, iface.prefix) ? dstIp : (iface.gateway ?? null);
+  }
+
+  setServiceRunning(deviceId, service, running) {
+    const device = this.device(deviceId);
+    if (device.services.has(service)) device.services.set(service, running);
   }
 
   setPolicyEnabled(deviceId, policyId, enabled) {
@@ -165,6 +178,8 @@ export class NetworkEngine {
   #hostFrame(node, frame, host) {
     node.addLatency(LATENCY.host);
     const iface = host.ifaces[0];
+    const closed = closedPort(host, iface, frame);
+    if (closed) return node.end('dropped', closed);
     if (iface && accepts(host, iface, frame)) return node.end('delivered');
     node.end('discarded', frame.dstMac === iface?.mac ? 'IP de destino ajena' : 'Trama para otro equipo');
   }
@@ -352,8 +367,9 @@ function createDeviceState(config, links) {
     up: true,
     ifaces,
     arp: new Map(),
+    dnsCache: new Map(), // nombre → { ip, ttl }
     sessions: new Map(),
-    services: new Set(config.roles ?? []),
+    services: new Map((config.roles ?? []).map((role) => [role, true])), // rol → en marcha
     leases: new Map(), // solo en servidores DHCP: MAC → { ip, hostname, active }
     policies: (config.policies ?? []).map((p) => ({ enabled: true, ...p })),
     hosts: config.hosts ?? [],
@@ -370,12 +386,20 @@ function accepts(device, iface, frame) {
     if (frame.dstMac !== iface.mac && !frame.isBroadcast) return false;
     // Los mensajes del cliente solo los escucha quien tiene el servicio DHCP (puerto UDP 67)
     if (DHCP_CLIENT_KINDS.has(frame.kind)) {
-      return device.services.has('DHCP') && (frame.dstIp === BROADCAST_IP || frame.dstIp === iface.ip);
+      return runs(device, 'DHCP') && (frame.dstIp === BROADCAST_IP || frame.dstIp === iface.ip);
     }
     return frame.payload.chaddr === iface.mac;
   }
   if (frame.dstMac !== iface.mac && !frame.isBroadcast) return false;
   return frame.dstIp === iface.ip || frame.dstIp === BROADCAST_IP;
+}
+
+// Una petición unicast dirigida a este equipo para un servicio que tiene pero está detenido
+function closedPort(device, iface, frame) {
+  const listener = SERVICE_PORTS[frame.protocol];
+  if (!iface || !listener?.kinds.has(frame.kind) || !device.services.has(listener.service)) return null;
+  if (frame.dstMac !== iface.mac || frame.dstIp !== iface.ip || runs(device, listener.service)) return null;
+  return `Puerto ${listener.port} cerrado: servicio ${listener.service} detenido`;
 }
 
 // Red conectada directamente o, si no, la interfaz con puerta de enlace (ruta por defecto)

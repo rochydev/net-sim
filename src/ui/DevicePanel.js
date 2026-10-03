@@ -113,7 +113,7 @@ export class DevicePanel {
     if (!state.config.roles?.length) return '';
     return section(
       'Roles',
-      `<div class="chips">${state.config.roles.map((r) => `<span class="chip">${r}</span>`).join('')}</div>`,
+      `<div class="chips">${[...state.services].map(([role, running]) => (running ? `<span class="chip chip--accept">${role}</span>` : `<span class="chip chip--deny">${role} · detenido</span>`)).join('')}</div>`,
     );
   }
 

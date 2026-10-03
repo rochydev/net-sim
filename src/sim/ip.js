@@ -10,4 +10,8 @@ export const networkOf = (ip, prefix) => intToIp((ipToInt(ip) & ipToInt(prefixTo
 
 export const sameSubnet = (ipA, ipB, prefix) => networkOf(ipA, prefix) === networkOf(ipB, prefix);
 
+const IPV4 = /^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/;
+
+export const isIpv4 = (text) => IPV4.test(text);
+
 export const isApipa = (ip) => ip?.startsWith('169.254.');
