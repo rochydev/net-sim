@@ -1,0 +1,257 @@
+// Topología de la red: solo datos. Ni el motor ni la escena tienen nada hardcodeado;
+// para cambiar la red basta con editar este archivo (y layout.js para las posiciones).
+
+export const topology = {
+  domain: 'nave.local',
+
+  vlans: [
+    { id: 10, name: 'Oficinas', subnet: '192.168.10.0/24', gateway: '192.168.10.1', color: '#3b82f6' },
+    { id: 20, name: 'Producción', subnet: '192.168.20.0/24', gateway: '192.168.20.1', color: '#f59e0b' },
+    { id: 30, name: 'Invitados', subnet: '192.168.30.0/24', gateway: '192.168.30.1', color: '#a855f7' },
+    { id: 50, name: 'Servidores', subnet: '192.168.50.0/24', gateway: '192.168.50.1', color: '#10b981' },
+  ],
+
+  devices: [
+    {
+      id: 'internet',
+      type: 'cloud',
+      name: 'Internet',
+      description: 'Red pública del ISP',
+      // Router del ISP: el otro extremo del enlace WAN del firewall
+      interfaces: [{ name: 'isp', port: 'ISP', ip: '203.0.113.1', prefix: 30, mac: '00:00:5E:00:01:01' }],
+      // Routers que atraviesa un paquete dentro de Internet (los verá tracert)
+      route: ['203.0.113.1', '198.51.100.17', '198.51.100.94'],
+      hosts: [
+        { name: 'dns.google', ip: '8.8.8.8' },
+        { name: 'one.one.one.one', ip: '1.1.1.1' },
+        { name: 'www.example.com', ip: '93.184.215.14' },
+      ],
+    },
+    {
+      id: 'fw',
+      type: 'firewall',
+      name: 'FW-01',
+      model: 'FortiGate 60F',
+      // Router-on-a-stick: una subinterfaz por VLAN sobre el puerto "internal" (trunk)
+      interfaces: [
+        { name: 'wan1', port: 'wan1', ip: '203.0.113.2', prefix: 30, gateway: '203.0.113.1', mac: '00:09:0F:A1:00:01' },
+        {
+          name: 'vlan10',
+          port: 'internal',
+          vlan: 10,
+          ip: '192.168.10.1',
+          prefix: 24,
+          mac: '00:09:0F:A1:00:10',
+          dhcpRelay: '192.168.50.10',
+        },
+        { name: 'vlan20', port: 'internal', vlan: 20, ip: '192.168.20.1', prefix: 24, mac: '00:09:0F:A1:00:20' },
+        {
+          name: 'vlan30',
+          port: 'internal',
+          vlan: 30,
+          ip: '192.168.30.1',
+          prefix: 24,
+          mac: '00:09:0F:A1:00:30',
+          dhcpRelay: '192.168.50.10',
+        },
+        { name: 'vlan50', port: 'internal', vlan: 50, ip: '192.168.50.1', prefix: 24, mac: '00:09:0F:A1:00:50' },
+      ],
+      // Políticas al estilo FortiOS: se evalúan de arriba abajo y gana la primera que coincide.
+      // Lo que no coincide con ninguna cae en el "implicit deny" final.
+      policies: [
+        {
+          id: 1,
+          name: 'Oficinas a servidores',
+          srcintf: ['vlan10'],
+          dstintf: ['vlan50'],
+          service: ['ALL'],
+          action: 'accept',
+        },
+        {
+          id: 2,
+          name: 'Salida a Internet',
+          srcintf: ['vlan10', 'vlan50'],
+          dstintf: ['wan1'],
+          service: ['ALL'],
+          action: 'accept',
+          nat: true,
+        },
+        {
+          id: 3,
+          name: 'Invitados a Internet',
+          srcintf: ['vlan30'],
+          dstintf: ['wan1'],
+          service: ['DNS', 'WEB', 'PING'],
+          action: 'accept',
+          nat: true,
+        },
+        {
+          id: 4,
+          name: 'Soporte temporal: Invitados a Producción',
+          srcintf: ['vlan30'],
+          dstintf: ['vlan20'],
+          service: ['PING'],
+          action: 'accept',
+          enabled: false,
+        },
+      ],
+    },
+    {
+      id: 'sw',
+      type: 'switch',
+      name: 'SW-CORE-01',
+      model: 'Switch L2 gestionable 24p',
+      vlan: 50,
+      ip: '192.168.50.2',
+      prefix: 24,
+      gateway: '192.168.50.1',
+      mac: '00:1E:BD:5C:00:01',
+    },
+    {
+      id: 'srv',
+      type: 'server',
+      name: 'SRV-DC01',
+      model: 'Windows Server 2022',
+      roles: ['AD DS', 'DHCP', 'DNS'],
+      vlan: 50,
+      ip: '192.168.50.10',
+      prefix: 24,
+      gateway: '192.168.50.1',
+      dns: '192.168.50.10',
+      mac: '00:15:5D:32:0A:10',
+      addressing: 'static',
+    },
+    {
+      id: 'pc1',
+      type: 'pc',
+      name: 'PC-OFI-01',
+      model: 'Windows 11 Pro',
+      vlan: 10,
+      ip: '192.168.10.101',
+      prefix: 24,
+      gateway: '192.168.10.1',
+      dns: '192.168.50.10',
+      mac: 'D4:81:D7:1A:22:01',
+      addressing: 'dhcp',
+    },
+    {
+      id: 'pc2',
+      type: 'pc',
+      name: 'PC-OFI-02',
+      model: 'Windows 11 Pro',
+      vlan: 10,
+      ip: '192.168.10.102',
+      prefix: 24,
+      gateway: '192.168.10.1',
+      dns: '192.168.50.10',
+      mac: 'D4:81:D7:1A:22:02',
+      addressing: 'dhcp',
+    },
+    {
+      id: 'pc3',
+      type: 'pc',
+      name: 'PC-OFI-03',
+      model: 'Windows 11 Pro',
+      vlan: 10,
+      ip: '192.168.10.103',
+      prefix: 24,
+      gateway: '192.168.10.1',
+      dns: '192.168.50.10',
+      mac: 'D4:81:D7:1A:22:03',
+      addressing: 'dhcp',
+    },
+    {
+      // Producción: IPs fijas y sin DNS, como suele pasar con PLCs y CNCs
+      id: 'plc1',
+      type: 'industrial',
+      name: 'PLC-LINEA-01',
+      model: 'Siemens S7-1500',
+      vlan: 20,
+      ip: '192.168.20.11',
+      prefix: 24,
+      gateway: '192.168.20.1',
+      dns: null,
+      mac: '00:1B:1B:7E:20:11',
+      addressing: 'static',
+    },
+    {
+      id: 'cnc1',
+      type: 'industrial',
+      name: 'CNC-01',
+      model: 'Fanuc 0i-F',
+      vlan: 20,
+      ip: '192.168.20.12',
+      prefix: 24,
+      gateway: '192.168.20.1',
+      dns: null,
+      mac: '00:E0:E4:3C:20:12',
+      addressing: 'static',
+    },
+    {
+      // Invitados: DNS público, nunca el del dominio
+      id: 'lap1',
+      type: 'laptop',
+      name: 'INVITADO-01',
+      model: 'Portátil externo',
+      vlan: 30,
+      ip: '192.168.30.100',
+      prefix: 24,
+      gateway: '192.168.30.1',
+      dns: '1.1.1.1',
+      mac: '3C:22:FB:9A:30:64',
+      addressing: 'dhcp',
+    },
+  ],
+
+  // Enlaces físicos. Puerto de acceso = una VLAN; trunk = varias VLANs etiquetadas (802.1Q)
+  links: [
+    { id: 'wan', a: { device: 'fw', port: 'wan1' }, b: { device: 'internet', port: 'ISP' }, mode: 'wan' },
+    {
+      id: 'trunk',
+      a: { device: 'sw', port: 'Gi1/0/24' },
+      b: { device: 'fw', port: 'internal' },
+      mode: 'trunk',
+      vlans: [10, 20, 30, 50],
+    },
+    { id: 'l-srv', a: { device: 'sw', port: 'Gi1/0/1' }, b: { device: 'srv', port: 'NIC1' }, mode: 'access', vlan: 50 },
+    { id: 'l-pc1', a: { device: 'sw', port: 'Gi1/0/5' }, b: { device: 'pc1', port: 'eth0' }, mode: 'access', vlan: 10 },
+    { id: 'l-pc2', a: { device: 'sw', port: 'Gi1/0/6' }, b: { device: 'pc2', port: 'eth0' }, mode: 'access', vlan: 10 },
+    { id: 'l-pc3', a: { device: 'sw', port: 'Gi1/0/7' }, b: { device: 'pc3', port: 'eth0' }, mode: 'access', vlan: 10 },
+    {
+      id: 'l-plc1',
+      a: { device: 'sw', port: 'Gi1/0/13' },
+      b: { device: 'plc1', port: 'X1' },
+      mode: 'access',
+      vlan: 20,
+    },
+    {
+      id: 'l-cnc1',
+      a: { device: 'sw', port: 'Gi1/0/14' },
+      b: { device: 'cnc1', port: 'eth0' },
+      mode: 'access',
+      vlan: 20,
+    },
+    {
+      id: 'l-lap1',
+      a: { device: 'sw', port: 'Gi1/0/20' },
+      b: { device: 'lap1', port: 'eth0' },
+      mode: 'access',
+      vlan: 30,
+    },
+  ],
+};
+
+export const DEVICE_TYPE_LABELS = {
+  cloud: 'Red externa',
+  firewall: 'Firewall / Router',
+  switch: 'Switch',
+  server: 'Servidor',
+  pc: 'Equipo de oficina',
+  industrial: 'Máquina industrial',
+  laptop: 'Portátil',
+};
+
+export const getVlan = (id) => topology.vlans.find((v) => v.id === id) ?? null;
+export const getDevice = (id) => topology.devices.find((d) => d.id === id) ?? null;
+export const getLinksOf = (deviceId) =>
+  topology.links.filter((l) => l.a.device === deviceId || l.b.device === deviceId);
