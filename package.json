@@ -1,9 +1,18 @@
 {
-  "name": "network-sim-3d",
+  "name": "net-sim",
   "private": true,
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "Simulador 3D de red: paquetes viajando entre dispositivos y escenarios de soporte (ping, DHCP, DNS, VLANs, firewall).",
+  "license": "MIT",
+  "homepage": "https://rochydev.github.io/net-sim/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/rochydev/net-sim.git"
+  },
   "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "dev": "vite",
     "build": "vite build",
