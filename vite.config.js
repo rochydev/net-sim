@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 
-// base relativa: el build funciona igual en GitHub Pages (/network-sim-3d/) que en local
+// base relativa: el build funciona igual en GitHub Pages (/net-sim/) que en local
 export default defineConfig({
   base: './',
   server: { port: 5190, open: false },
