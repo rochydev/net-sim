@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Network Sim 3D</title>
+    <meta
+      name="description"
+      content="Simulador 3D de red: ping, DHCP, DNS, VLANs y firewall visualizados paquete a paquete."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
+      rel="stylesheet"
+    />
+  </head>
+  <body>
+    <div id="viewport"></div>
+
+    <header class="hud hud-title">
+      <div class="brand">
+        <span class="brand-dot"></span>
+        <h1>Network Sim <span>3D</span></h1>
+      </div>
+      <p>Red de una nave industrial · 3 VLANs + servidores</p>
+      <ul class="hud-hint">
+        <li><kbd>Arrastrar</kbd> orbitar</li>
+        <li><kbd>Rueda</kbd> zoom</li>
+        <li><kbd>Clic</kbd> ver equipo</li>
+        <li><kbd>R</kbd> recentrar</li>
+      </ul>
+    </header>
+
+    <aside id="device-panel" class="hud panel" hidden></aside>
+    <section id="dock" class="hud dock" aria-label="Terminal y captura"></section>
+    <aside id="legend" class="hud legend" aria-label="Leyenda"></aside>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
