@@ -1,10 +1,11 @@
-import { prefixToMask } from '../sim/ip.js';
+import { prefixToMask, isApipa } from '../sim/ip.js';
 import { canRunShell } from '../sim/shell/Shell.js';
 import { DEVICE_TYPE_LABELS } from '../config/topology.js';
+import { icon, DEVICE_ICONS } from './icons.js';
 
 // Panel lateral con la configuración del dispositivo seleccionado.
 // Lee el estado del motor (no la topología estática) para reflejar cambios en vivo:
-// equipos caídos, políticas activadas, etc.
+// IPs obtenidas por DHCP, equipos caídos, políticas activadas, concesiones...
 export class DevicePanel {
   constructor(element, engine, { onClose, onOpenTerminal } = {}) {
     this.el = element;
@@ -20,39 +21,52 @@ export class DevicePanel {
   }
 
   show(deviceId) {
-    const state = this.engine.devices.get(deviceId);
-    if (!state) return this.hide();
     this.deviceId = deviceId;
-
-    const device = state.config;
-    const vlan = this.#vlan(device.vlan);
-    this.el.style.setProperty('--accent', device.type === 'firewall' ? '#ef4444' : (vlan?.color ?? '#60a5fa'));
-    this.el.innerHTML = `
-      <header class="panel__header">
-        <div>
-          <span class="panel__type">${DEVICE_TYPE_LABELS[device.type]}</span>
-          <h2>${device.name}</h2>
-          ${device.model || device.description ? `<p class="panel__model">${device.model ?? device.description}</p>` : ''}
-        </div>
-        <button class="panel__close" data-action="close" aria-label="Cerrar">×</button>
-      </header>
-      <div class="panel__meta">
-        <span class="panel__status ${state.up ? '' : 'is-down'}"><span class="status-dot"></span>${state.up ? 'En línea' : 'Sin servicio'}</span>
-        ${canRunShell(state) ? '<button type="button" class="chip-button" data-action="terminal">Abrir terminal</button>' : ''}
-      </div>
-      ${this.#body(state, vlan)}
-      ${this.#links(device)}
-    `;
-    this.el.hidden = false;
+    this.#render();
     // Reinicia la animación de entrada en cada selección
     this.el.classList.remove('is-entering');
     void this.el.offsetWidth;
     this.el.classList.add('is-entering');
   }
 
+  // Vuelve a pintar el equipo actual sin animación (cuando cambia su estado)
+  refresh(deviceId = this.deviceId) {
+    if (deviceId && deviceId === this.deviceId && !this.el.hidden) this.#render();
+  }
+
   hide() {
     this.deviceId = null;
     this.el.hidden = true;
+  }
+
+  #render() {
+    const state = this.engine.devices.get(this.deviceId);
+    if (!state) return this.hide();
+
+    const device = state.config;
+    const vlan = this.#vlan(device.vlan);
+    this.el.style.setProperty(
+      '--accent',
+      device.type === 'firewall' ? 'var(--danger)' : (vlan?.color ?? 'var(--accent)'),
+    );
+    this.el.innerHTML = `
+      <header class="panel__header">
+        <span class="panel__icon">${icon(DEVICE_ICONS[device.type], 20)}</span>
+        <div class="panel__heading">
+          <span class="panel__type">${DEVICE_TYPE_LABELS[device.type]}</span>
+          <h2>${device.name}</h2>
+          ${device.model || device.description ? `<p class="panel__model">${device.model ?? device.description}</p>` : ''}
+        </div>
+        <button class="icon-button" data-action="close" aria-label="Cerrar">${icon('close', 16)}</button>
+      </header>
+      <div class="panel__meta">
+        <span class="status ${state.up ? '' : 'is-down'}">${state.up ? 'En línea' : 'Sin servicio'}</span>
+        ${canRunShell(state) ? `<button type="button" class="button" data-action="terminal">${icon('terminal', 14)}Abrir terminal</button>` : ''}
+      </div>
+      ${this.#body(state, vlan)}
+      ${this.#links(device)}
+    `;
+    this.el.hidden = false;
   }
 
   #vlan(id) {
@@ -65,31 +79,53 @@ export class DevicePanel {
   }
 
   #body(state, vlan) {
-    const device = state.config;
-    switch (device.type) {
+    switch (state.type) {
       case 'cloud':
         return section('Hosts públicos', table(state.hosts.map((h) => [h.name, mono(h.ip)])));
       case 'firewall':
         return this.#interfaces(state) + this.#policies(state);
-      default: {
-        const rows = [
-          ['Dirección IP', mono(device.ip)],
-          ['Máscara', mono(prefixToMask(device.prefix))],
-          ['Puerta de enlace', mono(device.gateway)],
-          ['DNS', device.dns ? mono(device.dns) : '<span class="muted">sin configurar</span>'],
-          ['MAC', mono(device.mac)],
-          ['VLAN', vlan ? this.#vlanChip(vlan.id) : '—'],
-        ];
-        if (device.addressing) rows.push(['Asignación', device.addressing === 'dhcp' ? 'DHCP' : 'Estática']);
-        const roles = device.roles?.length
-          ? section(
-              'Roles',
-              `<div class="chips">${device.roles.map((r) => `<span class="chip">${r}</span>`).join('')}</div>`,
-            )
-          : '';
-        return section(device.type === 'switch' ? 'Gestión' : 'Configuración IP', table(rows)) + roles;
-      }
+      default:
+        return this.#addressing(state, vlan) + this.#roles(state) + this.#leases(state);
     }
+  }
+
+  #addressing(state, vlan) {
+    const iface = state.ifaces[0];
+    const dhcp = state.config.addressing === 'dhcp';
+    const none = '<span class="muted">—</span>';
+    let assignment = dhcp ? 'DHCP' : 'Estática';
+    if (dhcp && !iface.ip) assignment = '<span class="muted">DHCP · sin concesión</span>';
+    if (isApipa(iface.ip)) assignment = '<span class="chip chip--deny">APIPA</span>';
+
+    const rows = [
+      ['Dirección IP', iface.ip ? mono(iface.ip) : none],
+      ['Máscara', iface.prefix ? mono(prefixToMask(iface.prefix)) : none],
+      ['Puerta de enlace', iface.gateway ? mono(iface.gateway) : none],
+      ['DNS', iface.dns ? mono(iface.dns) : none],
+      ['MAC', mono(iface.mac)],
+      ['VLAN', vlan ? this.#vlanChip(vlan.id) : '—'],
+    ];
+    if (state.config.addressing) rows.push(['Asignación', assignment]);
+    return section(state.type === 'switch' ? 'Gestión' : 'Configuración IP', table(rows));
+  }
+
+  #roles(state) {
+    if (!state.config.roles?.length) return '';
+    return section(
+      'Roles',
+      `<div class="chips">${state.config.roles.map((r) => `<span class="chip">${r}</span>`).join('')}</div>`,
+    );
+  }
+
+  #leases(state) {
+    if (!state.services.has('DHCP')) return '';
+    const names = new Map([...this.engine.devices.values()].map((d) => [d.ifaces[0]?.mac, d.name]));
+    const rows = [...state.leases].map(([mac, lease]) => [
+      mono(lease.ip),
+      `${names.get(mac) ?? 'Desconocido'}<small>${mac}</small>`,
+      lease.active ? '<span class="chip chip--accept">Activa</span>' : '<span class="chip chip--off">Libre</span>',
+    ]);
+    return section('Concesiones DHCP', table(rows));
   }
 
   #interfaces(state) {
@@ -111,7 +147,7 @@ export class DevicePanel {
       `${p.name}<small>${p.srcintf.join(', ')} → ${p.dstintf.join(', ')} · ${p.service.join(', ')}${p.nat ? ' · NAT' : ''}</small>`,
       p.enabled
         ? `<span class="chip chip--accept">${p.action.toUpperCase()}</span>`
-        : '<span class="chip chip--off">DESACTIVADA</span>',
+        : '<span class="chip chip--off">Desactivada</span>',
     ]);
     rows.push([
       mono('#0'),

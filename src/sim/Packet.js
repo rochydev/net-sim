@@ -1,8 +1,12 @@
 export const BROADCAST_MAC = 'FF:FF:FF:FF:FF:FF';
 export const BROADCAST_IP = '255.255.255.255';
 
+// Mensajes DHCP según quién los envía (puertos UDP 68 → 67 y 67 → 68)
+export const DHCP_CLIENT_KINDS = new Set(['discover', 'request', 'release']);
+export const DHCP_SERVER_KINDS = new Set(['offer', 'ack', 'nak']);
+
 // Tipos que responden a una petición previa: el firewall los deja pasar si existe la sesión
-const REPLY_KINDS = new Set(['echo-reply', 'time-exceeded', 'unreachable', 'response']);
+const REPLY_KINDS = new Set(['echo-reply', 'time-exceeded', 'unreachable', 'response', ...DHCP_SERVER_KINDS]);
 
 const TITLES = {
   'arp:request': 'ARP Request',
@@ -11,6 +15,12 @@ const TITLES = {
   'icmp:echo-reply': 'Echo Reply',
   'icmp:time-exceeded': 'TTL Exceeded',
   'icmp:unreachable': 'Unreachable',
+  'dhcp:discover': 'DHCP Discover',
+  'dhcp:offer': 'DHCP Offer',
+  'dhcp:request': 'DHCP Request',
+  'dhcp:ack': 'DHCP ACK',
+  'dhcp:nak': 'DHCP NAK',
+  'dhcp:release': 'DHCP Release',
 };
 
 let sequence = 0;
@@ -67,6 +77,10 @@ export class Packet {
       case 'icmp:unreachable':
         return 'Destination unreachable (Host unreachable)';
       default:
+        if (this.protocol === 'dhcp') {
+          const xid = `0x${payload.xid.toString(16).padStart(8, '0')}`;
+          return `${this.title} - Transaction ID ${xid}${payload.yiaddr ? ` (IP ofrecida ${payload.yiaddr})` : ''}`;
+        }
         return this.title;
     }
   }

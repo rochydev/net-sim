@@ -1,12 +1,21 @@
 import { dashedMac } from '../format.js';
 
 export async function* arp({ sim, deviceId, args }) {
-  if (!args.some((a) => ['-a', '-g', '/a'].includes(a.toLowerCase()))) {
-    yield 'Uso: arp -a';
+  const option = args[0]?.toLowerCase();
+  const device = sim.engine.device(deviceId);
+
+  // arp -d * vacía la caché (en Windows requiere consola de administrador; aquí se permite siempre)
+  if (option === '-d' || option === '/d') {
+    if (args[1] === '*') device.arp.clear();
+    else device.arp.delete(args[1]);
     return;
   }
 
-  const device = sim.engine.device(deviceId);
+  if (!['-a', '-g', '/a'].includes(option)) {
+    yield 'Uso: arp -a | arp -d <IP> | arp -d *';
+    return;
+  }
+
   if (!device.arp.size) {
     yield 'No se encontraron entradas ARP.';
     return;

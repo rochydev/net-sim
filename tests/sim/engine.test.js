@@ -77,8 +77,8 @@ describe('NetworkEngine', () => {
       expect(trace.failure.data.policy).toBe(0);
     });
 
-    it('permite Invitados → Producción al activar la política #4', () => {
-      engine.setPolicyEnabled('fw', 4, true);
+    it('permite Invitados → Producción al activar la política #5', () => {
+      engine.setPolicyEnabled('fw', 5, true);
       const trace = engine.trace(
         echoRequest({ srcMac: '3C:22:FB:9A:30:64', dstMac: MAC.gw30, srcIp: '192.168.30.100', dstIp: '192.168.20.11' }),
         'lap1',
