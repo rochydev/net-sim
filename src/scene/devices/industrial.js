@@ -4,7 +4,7 @@ import { mat, glow, box, cylinder, place } from './materials.js';
 // Máquina industrial: cuerpo, ventana, cuadro de control y baliza de estado
 export function createIndustrial() {
   const g = new THREE.Group();
-  const yellow = mat('#c08a12', { roughness: 0.5 });
+  const yellow = mat('#b88a3a', { roughness: 0.6 });
   const dark = mat('#1f2430');
 
   place(g, box(1.8, 0.12, 1.2, dark), 0, 0.06, 0);
@@ -19,12 +19,12 @@ export function createIndustrial() {
 
   // Cuadro de control con pantalla HMI
   place(g, box(0.36, 0.6, 0.3, dark), 0.9, 1.0, 0.2);
-  const hmi = place(g, new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.2), glow('#38bdf8', 1.2)), 0.9, 1.1, 0.352);
+  const hmi = place(g, new THREE.Mesh(new THREE.PlaneGeometry(0.26, 0.2), glow('#7fb8d6', 0.7)), 0.9, 1.1, 0.352);
 
   // Baliza de 3 colores (verde encendida = máquina en marcha)
   place(g, cylinder(0.025, 0.3, mat('#6b7280')), 0.55, 1.52, -0.3);
-  const beacon = ['#22c55e', '#f59e0b', '#ef4444'].map(
-    (c, i) => place(g, cylinder(0.06, 0.1, glow(c, i === 0 ? 2.5 : 0.15)), 0.55, 1.72 + i * 0.105, -0.3).material,
+  const beacon = ['#8cc98f', '#d6a157', '#e06c75'].map(
+    (c, i) => place(g, cylinder(0.06, 0.1, glow(c, i === 0 ? 1.4 : 0.1)), 0.55, 1.72 + i * 0.105, -0.3).material,
   );
 
   return {

@@ -1,9 +1,10 @@
-// Colores de los paquetes por protocolo. Los usa la escena y también la leyenda y la captura.
+// Paleta de la escena y de la UI que la describe (leyenda, captura).
+// Tonos apagados: el color se reserva para distinguir protocolos y VLANs, no para decorar.
 export const PROTOCOL_COLORS = {
-  icmp: '#22d3ee',
-  arp: '#facc15',
-  dhcp: '#4ade80',
-  dns: '#f472b6',
+  icmp: '#56b6c2',
+  arp: '#e5c07b',
+  dhcp: '#98c379',
+  dns: '#c678dd',
 };
 
 export const PROTOCOL_NAMES = {
@@ -14,13 +15,26 @@ export const PROTOCOL_NAMES = {
 };
 
 export const STATUS_COLORS = {
-  danger: '#ef4444',
-  warning: '#f59e0b',
-  success: '#4ade80',
-  info: '#93c5fd',
+  danger: '#e06c75',
+  warning: '#d19a66',
+  success: '#98c379',
+  info: '#6b9bf2',
 };
 
 export const CABLE_COLORS = {
-  trunk: '#e2e8f0',
-  wan: '#f87171',
+  trunk: '#aeb6c2',
+  wan: '#c76b73',
+};
+
+export const DEVICE_ACCENTS = {
+  cloud: '#8fa3bf',
+  firewall: '#e06c75',
+  switch: '#aeb6c2',
+};
+
+export const SCENE_COLORS = {
+  background: 0x0e1116,
+  floor: 0x13171c,
+  gridMajor: 0x1d232b,
+  gridMinor: 0x171b21,
 };

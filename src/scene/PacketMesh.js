@@ -1,18 +1,18 @@
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
-const CORE = new THREE.SphereGeometry(0.13, 20, 14);
-const TRAIL_LENGTH = 8;
-const TRAIL_SPACING = 0.16; // metros entre esferas de la estela
+const CORE = new THREE.SphereGeometry(0.11, 20, 14);
+const TRAIL_LENGTH = 5;
+const TRAIL_SPACING = 0.12; // metros entre esferas de la estela
 
 // Paquete visible: esfera brillante + estela + etiqueta con el tipo de trama.
 export class PacketMesh {
   constructor(color, label) {
     this.group = new THREE.Group();
 
-    // Color por encima de 1 y sin tone mapping: así supera el umbral del bloom y brilla
+    // Color algo por encima de 1 y sin tone mapping: supera el umbral del bloom y deja un halo leve
     this.material = new THREE.MeshBasicMaterial({
-      color: new THREE.Color(color).multiplyScalar(2.4),
+      color: new THREE.Color(color).multiplyScalar(1.5),
       toneMapped: false,
       transparent: true,
     });
@@ -21,7 +21,7 @@ export class PacketMesh {
 
     this.trail = Array.from({ length: TRAIL_LENGTH }, (_, i) => {
       const dot = new THREE.Mesh(CORE, this.material);
-      dot.scale.setScalar(0.75 * (1 - i / TRAIL_LENGTH));
+      dot.scale.setScalar(0.6 * (1 - i / TRAIL_LENGTH));
       this.group.add(dot);
       return dot;
     });

@@ -12,8 +12,8 @@ export class Cable {
     this.material = new THREE.MeshStandardMaterial({
       color,
       emissive: color,
-      emissiveIntensity: 0.35,
-      roughness: 0.45,
+      emissiveIntensity: 0.12,
+      roughness: 0.6,
     });
     this.mesh = new THREE.Mesh(geometry, this.material);
     this.mesh.raycast = () => {}; // los cables no se seleccionan (de momento)
