@@ -54,10 +54,13 @@ async function* help() {
   yield 'Comandos disponibles en esta simulación:';
   yield '';
   yield '  ipconfig [/all]          Configuración IP del equipo';
+  yield '  ipconfig /release        Libera la concesión DHCP';
+  yield '  ipconfig /renew          Pide (o renueva) una IP al servidor DHCP';
   yield '  ping [-n N] [-t] [-i TTL] <IP>';
   yield '                           Comprueba la conectividad con otro equipo';
   yield '  tracert <IP>             Muestra los routers hasta el destino';
   yield '  arp -a                   Muestra la caché ARP';
+  yield '  arp -d *                 Vacía la caché ARP';
   yield '  cls                      Limpia la pantalla';
   yield '';
   yield 'Ctrl+C detiene el comando en curso.';

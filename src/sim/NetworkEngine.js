@@ -1,5 +1,5 @@
 import { sameSubnet } from './ip.js';
-import { BROADCAST_IP } from './Packet.js';
+import { BROADCAST_IP, DHCP_CLIENT_KINDS, DHCP_SERVER_KINDS } from './Packet.js';
 import { Trace, TraceNode } from './Trace.js';
 import { matchesService } from './services.js';
 
@@ -22,7 +22,21 @@ export class NetworkEngine {
   constructor(topology) {
     this.topology = topology;
     this.links = topology.links;
-    this.devices = new Map(topology.devices.map((d) => [d.id, createDeviceState(d, topology.links)]));
+    this.reset();
+  }
+
+  // Vuelve al estado inicial de la topología: equipos encendidos, cachés y sesiones vacías
+  reset() {
+    this.devices = new Map(this.topology.devices.map((d) => [d.id, createDeviceState(d, this.topology.links)]));
+
+    // Los equipos configurados por DHCP ya tienen concesión al arrancar la simulación
+    const server = [...this.devices.values()].find((d) => d.services.has('DHCP'));
+    if (!server) return;
+    for (const device of this.devices.values()) {
+      if (device.config.addressing !== 'dhcp') continue;
+      server.leases.set(device.config.mac, { ip: device.config.ip, hostname: device.name, active: true });
+      device.ifaces[0].dhcpServer = server.ifaces[0].ip;
+    }
   }
 
   device(id) {
@@ -123,7 +137,7 @@ export class NetworkEngine {
 
     // El propio switch también es un host en su VLAN de gestión
     const mgmt = sw.ifaces.find((i) => i.vlan === vlan);
-    if (ingress && mgmt && accepts(mgmt, frame)) {
+    if (ingress && mgmt && accepts(sw, mgmt, frame)) {
       node.end('delivered');
       if (!frame.isBroadcast) return;
     }
@@ -151,7 +165,7 @@ export class NetworkEngine {
   #hostFrame(node, frame, host) {
     node.addLatency(LATENCY.host);
     const iface = host.ifaces[0];
-    if (iface && accepts(iface, frame)) return node.end('delivered');
+    if (iface && accepts(host, iface, frame)) return node.end('delivered');
     node.end('discarded', frame.dstMac === iface?.mac ? 'IP de destino ajena' : 'Trama para otro equipo');
   }
 
@@ -164,7 +178,19 @@ export class NetworkEngine {
     if (!ingress) return node.end('discarded', `Sin interfaz en la VLAN ${vlan}`);
     if (frame.dstMac !== ingress.mac && !frame.isBroadcast) return node.end('discarded', 'Trama para otro equipo');
     if (frame.protocol === 'arp' || frame.isBroadcast) {
-      return accepts(ingress, frame) ? node.end('delivered') : node.end('discarded', 'Un router no reenvía broadcasts');
+      // La excepción a "un router no reenvía broadcasts": el DHCP relay (ip helper-address)
+      if (frame.protocol === 'dhcp' && ingress.dhcpRelay && DHCP_CLIENT_KINDS.has(frame.kind)) {
+        return this.#relayToServer(node, frame, router, ingress);
+      }
+      return accepts(router, ingress, frame)
+        ? node.end('delivered')
+        : node.end('discarded', 'Un router no reenvía broadcasts');
+    }
+
+    // Respuesta del servidor DHCP dirigida al relay: se reenvía al cliente en su VLAN
+    const relayIface = router.ifaces.find((i) => i.ip === frame.dstIp && i.ip === frame.payload.giaddr);
+    if (frame.protocol === 'dhcp' && relayIface && DHCP_SERVER_KINDS.has(frame.kind)) {
+      return this.#relayToClient(node, frame, router, relayIface);
     }
 
     // Firewall con estado: una respuesta de una sesión abierta no se evalúa contra las políticas
@@ -210,6 +236,39 @@ export class NetworkEngine {
     if (!mac) return node.end('unreachable', 'Host inalcanzable (ARP sin respuesta)', { replyFrom: ingress.ip });
 
     this.#send(node, packet.with({ ttl: packet.ttl - 1, srcMac: egress.mac, dstMac: mac }), router, egress);
+  }
+
+  // El relay reenvía el broadcast del cliente como unicast al servidor, anotando en giaddr
+  // la interfaz por la que llegó: así el servidor sabe de qué subred dar la IP
+  #relayToServer(node, frame, router, ingress) {
+    const egress = routeLookup(router, ingress.dhcpRelay);
+    const mac = egress && this.#nextHopMac(router, egress, ingress.dhcpRelay);
+    if (!mac) return node.end('unreachable', 'Servidor DHCP inalcanzable', { replyFrom: ingress.ip });
+
+    node.end('relayed');
+    node.note('relay', `DHCP relay → ${ingress.dhcpRelay}`);
+    const relayed = frame.with({
+      srcMac: egress.mac,
+      dstMac: mac,
+      srcIp: ingress.ip,
+      dstIp: ingress.dhcpRelay,
+      ttl: INITIAL_TTL.firewall,
+      payload: { ...frame.payload, giaddr: ingress.ip },
+    });
+    this.#send(node, relayed, router, egress);
+  }
+
+  #relayToClient(node, frame, router, iface) {
+    node.end('relayed');
+    node.note('relay', `DHCP relay → VLAN ${iface.vlan}`);
+    const toClient = frame.with({
+      srcMac: iface.mac,
+      dstMac: frame.payload.chaddr,
+      srcIp: iface.ip,
+      dstIp: frame.payload.yiaddr ?? BROADCAST_IP,
+      ttl: INITIAL_TTL.firewall,
+    });
+    this.#send(node, toClient, router, iface);
   }
 
   // Internet como caja negra: unos cuantos routers del ISP y los hosts públicos detrás
@@ -294,6 +353,8 @@ function createDeviceState(config, links) {
     ifaces,
     arp: new Map(),
     sessions: new Map(),
+    services: new Set(config.roles ?? []),
+    leases: new Map(), // solo en servidores DHCP: MAC → { ip, hostname, active }
     policies: (config.policies ?? []).map((p) => ({ enabled: true, ...p })),
     hosts: config.hosts ?? [],
     route: config.route ?? [],
@@ -301,9 +362,17 @@ function createDeviceState(config, links) {
 }
 
 // ¿La pila IP de esta interfaz se queda con la trama?
-function accepts(iface, frame) {
+function accepts(device, iface, frame) {
   if (frame.protocol === 'arp') {
     return frame.kind === 'request' ? frame.payload.targetIp === iface.ip : frame.dstMac === iface.mac;
+  }
+  if (frame.protocol === 'dhcp') {
+    if (frame.dstMac !== iface.mac && !frame.isBroadcast) return false;
+    // Los mensajes del cliente solo los escucha quien tiene el servicio DHCP (puerto UDP 67)
+    if (DHCP_CLIENT_KINDS.has(frame.kind)) {
+      return device.services.has('DHCP') && (frame.dstIp === BROADCAST_IP || frame.dstIp === iface.ip);
+    }
+    return frame.payload.chaddr === iface.mac;
   }
   if (frame.dstMac !== iface.mac && !frame.isBroadcast) return false;
   return frame.dstIp === iface.ip || frame.dstIp === BROADCAST_IP;

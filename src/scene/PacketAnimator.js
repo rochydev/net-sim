@@ -6,6 +6,8 @@ const HOP_MIN = 0.35; // s: ni los cables cortos pasan en un parpadeo...
 const HOP_MAX = 1.1; // ...ni los largos se hacen eternos
 const FADE = 0.35;
 
+const NOTE_TONES = { policy: 'success', nat: 'info', relay: 'info' };
+
 const OUTCOME_NOTES = {
   dropped: 'danger',
   'ttl-exceeded': 'warning',
@@ -81,9 +83,9 @@ export class PacketAnimator {
 
   #arrive(node) {
     const device = this.view.getDevice(node.device);
-    for (const note of node.notes) this.effects.note(node.device, note.text, note.type === 'nat' ? 'info' : 'success');
+    for (const note of node.notes) this.effects.note(node.device, note.text, NOTE_TONES[note.type] ?? 'info');
 
-    if (node.outcome === 'delivered') device.pulse(PROTOCOL_COLORS[node.frame.protocol]);
+    if (node.outcome === 'delivered' || node.outcome === 'relayed') device.pulse(PROTOCOL_COLORS[node.frame.protocol]);
     const tone = OUTCOME_NOTES[node.outcome];
     if (tone) {
       device.pulse(STATUS_COLORS[tone]);

@@ -13,7 +13,7 @@ const instantPlayer = {
 //   3. el "player" la reproduce y el protocolo espera a que termine
 // El player lo inyecta main.js; el simulador no sabe que existe una escena 3D.
 //
-// Eventos: 'trace' ({ packet, trace, from })
+// Eventos: 'trace' ({ packet, trace, from }), 'device' ({ id }), 'reset'
 export class Simulator {
   constructor(topology, { random = Math.random } = {}) {
     this.topology = topology;
@@ -36,5 +36,20 @@ export class Simulator {
 
   wait(ms) {
     return this.player.wait(ms);
+  }
+
+  // Un protocolo ha cambiado la configuración de un equipo (p. ej. nueva IP por DHCP)
+  deviceChanged(deviceId) {
+    this.events.emit('device', { id: deviceId });
+  }
+
+  setDeviceUp(deviceId, up) {
+    this.engine.device(deviceId).up = up;
+    this.deviceChanged(deviceId);
+  }
+
+  reset() {
+    this.engine.reset();
+    this.events.emit('reset');
   }
 }

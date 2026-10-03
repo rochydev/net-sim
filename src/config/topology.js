@@ -5,10 +5,10 @@ export const topology = {
   domain: 'nave.local',
 
   vlans: [
-    { id: 10, name: 'Oficinas', subnet: '192.168.10.0/24', gateway: '192.168.10.1', color: '#3b82f6' },
-    { id: 20, name: 'Producción', subnet: '192.168.20.0/24', gateway: '192.168.20.1', color: '#f59e0b' },
-    { id: 30, name: 'Invitados', subnet: '192.168.30.0/24', gateway: '192.168.30.1', color: '#a855f7' },
-    { id: 50, name: 'Servidores', subnet: '192.168.50.0/24', gateway: '192.168.50.1', color: '#10b981' },
+    { id: 10, name: 'Oficinas', subnet: '192.168.10.0/24', gateway: '192.168.10.1', color: '#6b9bf2' },
+    { id: 20, name: 'Producción', subnet: '192.168.20.0/24', gateway: '192.168.20.1', color: '#d6a157' },
+    { id: 30, name: 'Invitados', subnet: '192.168.30.0/24', gateway: '192.168.30.1', color: '#a58bd8' },
+    { id: 50, name: 'Servidores', subnet: '192.168.50.0/24', gateway: '192.168.50.1', color: '#5fb59a' },
   ],
 
   devices: [
@@ -86,7 +86,16 @@ export const topology = {
           nat: true,
         },
         {
+          // La renovación de la concesión va por unicast directo al servidor, sin pasar por el relay
           id: 4,
+          name: 'Invitados a DHCP',
+          srcintf: ['vlan30'],
+          dstintf: ['vlan50'],
+          service: ['DHCP'],
+          action: 'accept',
+        },
+        {
+          id: 5,
           name: 'Soporte temporal: Invitados a Producción',
           srcintf: ['vlan30'],
           dstintf: ['vlan20'],
@@ -113,6 +122,29 @@ export const topology = {
       name: 'SRV-DC01',
       model: 'Windows Server 2022',
       roles: ['AD DS', 'DHCP', 'DNS'],
+      // Ámbitos DHCP: el servidor elige uno según la interfaz del relay (giaddr) que le reenvía la petición
+      dhcp: {
+        leaseHours: 8,
+        scopes: [
+          {
+            name: 'Oficinas',
+            network: '192.168.10.0',
+            prefix: 24,
+            range: ['192.168.10.100', '192.168.10.199'],
+            gateway: '192.168.10.1',
+            dns: '192.168.50.10',
+            domain: 'nave.local',
+          },
+          {
+            name: 'Invitados',
+            network: '192.168.30.0',
+            prefix: 24,
+            range: ['192.168.30.100', '192.168.30.199'],
+            gateway: '192.168.30.1',
+            dns: '1.1.1.1',
+          },
+        ],
+      },
       vlan: 50,
       ip: '192.168.50.10',
       prefix: 24,

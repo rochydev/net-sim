@@ -60,10 +60,13 @@ export class DeviceMesh {
     el.className = 'device-label';
     el.style.setProperty('--accent', this.accent);
     el.innerHTML = `
+      <span class="device-label__marker"></span>
       <span class="device-label__name">${device.name}</span>
-      ${device.ip ? `<span class="device-label__ip">${device.ip}</span>` : ''}
+      <span class="device-label__ip"></span>
     `;
     this.labelEl = el;
+    this.ipEl = el.querySelector('.device-label__ip');
+    this.setAddress(device.ip);
 
     // CSS2DObject: un nodo de la escena cuyo "dibujo" es un elemento del DOM.
     // Three.js escribe style.transform del contenedor en cada frame, por eso
@@ -83,6 +86,32 @@ export class DeviceMesh {
   setSelected(value) {
     this.selected = value;
     this.labelEl.classList.toggle('is-selected', value);
+  }
+
+  // Solo los equipos de una tarjeta muestran IP; firewall y nube tienen varias interfaces
+  setAddress(ip) {
+    this.address = ip;
+    this.ipEl.textContent = this.device.mac ? (ip ?? 'sin IP') : '';
+    this.ipEl.hidden = !this.ipEl.textContent;
+  }
+
+  // Equipo caído: se apagan pantallas y LEDs y la etiqueta lo indica
+  setUp(up) {
+    for (const material of [...this.model.screens, ...this.model.leds]) {
+      material.userData.on ??= material.emissiveIntensity;
+      material.emissiveIntensity = up ? material.userData.on : 0;
+    }
+    this.labelEl.classList.toggle('is-down', !up);
+  }
+
+  // Refleja el estado del motor: IP actual y si está encendido
+  sync(state) {
+    this.setAddress(state.ifaces[0]?.ip ?? null);
+    this.setUp(state.up);
+    if (!state.up) {
+      this.ipEl.textContent = 'sin servicio';
+      this.ipEl.hidden = false;
+    }
   }
 
   // Punto de conexión del cable en coordenadas de mundo.
