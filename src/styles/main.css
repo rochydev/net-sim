@@ -896,9 +896,10 @@ code {
 }
 
 /* ---------- Leyenda ---------- */
+/* Arriba a la derecha: abajo taparía la nave; el panel de equipo queda por encima */
 .legend {
+  top: 20px;
   right: 20px;
-  bottom: 20px;
   width: 210px;
   padding: 12px 14px 14px;
   border: 1px solid var(--border);
