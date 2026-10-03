@@ -34,6 +34,14 @@ const terminal = new Terminal(document.createElement('div'), sim);
 const capture = new PacketCapture(document.createElement('div'), sim);
 const panel = new DevicePanel(document.getElementById('device-panel'), sim.engine, {
   onClose: () => view.select(null),
+  onTogglePolicy: (deviceId, policyId, enabled) => {
+    sim.setPolicyEnabled(deviceId, policyId, enabled);
+    effects.note(
+      deviceId,
+      `Política #${policyId} ${enabled ? 'activada' : 'desactivada'}`,
+      enabled ? 'success' : 'warning',
+    );
+  },
   onOpenTerminal: (deviceId) => {
     terminal.setDevice(deviceId);
     dock.select('terminal');
@@ -53,6 +61,8 @@ const runner = new ScenarioRunner({
     await terminal.run(line);
   },
   focus: (deviceId) => sceneManager.focusOn(view.getDevice(deviceId).focusPoint),
+  select: (deviceId) => view.select(deviceId),
+  setPolicyEnabled: (deviceId, policyId, enabled) => sim.setPolicyEnabled(deviceId, policyId, enabled),
   setDeviceUp: (deviceId, up) => sim.setDeviceUp(deviceId, up),
   setServiceRunning: (deviceId, service, running) => sim.setServiceRunning(deviceId, service, running),
   note: (deviceId, text, tone) => effects.note(deviceId, text, tone),

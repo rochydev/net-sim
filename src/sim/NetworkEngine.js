@@ -230,7 +230,11 @@ export class NetworkEngine {
           p.dstintf.includes(egress.name) &&
           matchesService(p.service, packet),
       );
-      if (!policy) return node.end('dropped', 'Denegado por la política implícita', { policy: 0 });
+      if (!policy) {
+        router.implicitDenyHits++;
+        return node.end('dropped', 'Denegado por la política implícita', { policy: 0 });
+      }
+      policy.hits++;
       if (policy.action !== 'accept') {
         return node.end('dropped', `Denegado por la política #${policy.id}`, { policy: policy.id });
       }
@@ -371,7 +375,9 @@ function createDeviceState(config, links) {
     sessions: new Map(),
     services: new Map((config.roles ?? []).map((role) => [role, true])), // rol → en marcha
     leases: new Map(), // solo en servidores DHCP: MAC → { ip, hostname, active }
-    policies: (config.policies ?? []).map((p) => ({ enabled: true, ...p })),
+    // Contadores de aciertos por política, como los que muestra FortiOS
+    policies: (config.policies ?? []).map((p) => ({ enabled: true, ...p, hits: 0 })),
+    implicitDenyHits: 0,
     hosts: config.hosts ?? [],
     route: config.route ?? [],
   };
