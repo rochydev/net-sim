@@ -32,7 +32,9 @@ export async function resolveName(sim, clientId, name) {
   if (cached) return { status: 'resolved', ip: cached.ip, name: fqdn, cached: true };
 
   const server = client.ifaces[0].dns;
-  if (!server || !client.ifaces[0].ip) return { status: 'no-server', name: fqdn };
+  if (!server || !client.ifaces[0].ip || !sim.engine.mediaConnected(clientId)) {
+    return { status: 'no-server', name: fqdn };
+  }
 
   const response = await lookup(sim, clientId, server, fqdn);
   if (!response) return { status: 'timeout', name: fqdn, server };

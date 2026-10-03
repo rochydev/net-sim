@@ -30,6 +30,10 @@ export async function* ipconfig({ sim, deviceId, args }) {
     yield '';
     yield 'Configuración IP de Windows';
     yield '';
+    if (result.status === 'disconnected') {
+      yield 'No se puede realizar ninguna operación en Ethernet mientras los medios estén desconectados.';
+      return;
+    }
     if (result.status === 'static') {
       yield 'La operación ha fallado porque el adaptador Ethernet no tiene habilitado DHCP.';
       return;
@@ -69,6 +73,11 @@ function* adapter(sim, device, all) {
 
   yield 'Adaptador de Ethernet Ethernet:';
   yield '';
+  if (!sim.engine.mediaConnected(device.id)) {
+    yield dotted('Estado de los medios', 'medios desconectados');
+    yield dotted('Sufijo DNS específico para la conexión', '');
+    return;
+  }
   yield dotted('Sufijo DNS específico para la conexión', iface.ip && !apipa ? dnsSuffix(device) : '');
   if (all) {
     yield dotted('Descripción', NIC_MODEL[device.type]);

@@ -13,7 +13,7 @@ const instantPlayer = {
 //   3. el "player" la reproduce y el protocolo espera a que termine
 // El player lo inyecta main.js; el simulador no sabe que existe una escena 3D.
 //
-// Eventos: 'trace' ({ packet, trace, from }), 'device' ({ id }), 'reset'
+// Eventos: 'trace' ({ packet, trace, from }), 'device' ({ id }), 'link' ({ id }), 'reset'
 export class Simulator {
   constructor(topology, { random = Math.random } = {}) {
     this.topology = topology;
@@ -61,6 +61,11 @@ export class Simulator {
   setPolicyEnabled(deviceId, policyId, enabled) {
     this.engine.setPolicyEnabled(deviceId, policyId, enabled);
     this.deviceChanged(deviceId);
+  }
+
+  setLinkUp(linkId, up) {
+    this.engine.setLinkUp(linkId, up);
+    this.events.emit('link', { id: linkId });
   }
 
   reset() {

@@ -1065,3 +1065,56 @@ code {
 .toggle input:checked ~ .toggle__label {
   color: var(--success);
 }
+
+.cable-break {
+  display: grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  border: 1px solid var(--danger);
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--danger);
+  font: 600 13px/1 var(--font);
+  pointer-events: none;
+}
+
+.panel__actions {
+  display: flex;
+  gap: 6px;
+}
+
+.button--danger:hover:not(:disabled) {
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.kv td:last-child .icon-button {
+  width: 24px;
+  height: 24px;
+  margin: -3px -4px -3px 0;
+}
+
+.caption__text {
+  flex: 1;
+}
+
+.caption__actions {
+  display: flex;
+  flex: none;
+  gap: 4px;
+  align-items: center;
+}
+
+.caption__actions [hidden] {
+  display: none;
+}
+
+.scenarios__footer .toggle {
+  color: var(--text-soft);
+  font-size: 12px;
+}
+
+.scenarios__footer .toggle input:disabled ~ * {
+  opacity: 0.5;
+}

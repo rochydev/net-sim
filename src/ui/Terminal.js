@@ -51,6 +51,10 @@ export class Terminal {
     this.input.focus();
   }
 
+  abort() {
+    this.running?.abort();
+  }
+
   // Mientras un escenario usa la terminal, el usuario no puede escribir ni cambiar de equipo
   setLocked(locked) {
     this.locked = locked;

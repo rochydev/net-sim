@@ -18,6 +18,7 @@ export async function release(sim, clientId) {
   const client = engine.device(clientId);
   const iface = client.ifaces[0];
   if (!usesDhcp(client)) return { status: 'static' };
+  if (!engine.mediaConnected(clientId)) return { status: 'disconnected' };
 
   if (iface.ip && !isApipa(iface.ip) && iface.dhcpServer) {
     const mac = await nextHopMac(sim, client, iface.dhcpServer);
@@ -49,6 +50,7 @@ export async function renew(sim, clientId) {
   const client = sim.engine.device(clientId);
   const iface = client.ifaces[0];
   if (!usesDhcp(client)) return { status: 'static' };
+  if (!sim.engine.mediaConnected(clientId)) return { status: 'disconnected' };
 
   if (iface.ip && !isApipa(iface.ip) && iface.dhcpServer) {
     const ack = await unicastRenew(sim, client);

@@ -4,6 +4,7 @@ import dhcpFailure from './dhcpFailure.js';
 import dns from './dns.js';
 import dnsFailure from './dnsFailure.js';
 import firewall from './firewall.js';
+import breakage from './breakage.js';
 
 // Orden en el que aparecen en el menú
-export const scenarios = [ping, dhcp, dhcpFailure, dns, dnsFailure, firewall];
+export const scenarios = [ping, dhcp, dhcpFailure, dns, dnsFailure, firewall, breakage];

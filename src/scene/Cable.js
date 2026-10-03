@@ -1,7 +1,9 @@
 import * as THREE from 'three';
+import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 
-// Cable físico entre dos dispositivos. Su curva es la "vía" por la que
-// PacketMesh moverá los paquetes en la fase 2.
+const DISCONNECTED = new THREE.Color('#3a4049');
+
+// Cable físico entre dos dispositivos. Su curva es la "vía" por la que viajan los paquetes.
 export class Cable {
   constructor(link, points, { color, radius = 0.028 }) {
     this.link = link;
@@ -15,8 +17,23 @@ export class Cable {
       emissiveIntensity: 0.12,
       roughness: 0.6,
     });
+    this.color = new THREE.Color(color);
     this.mesh = new THREE.Mesh(geometry, this.material);
-    this.mesh.raycast = () => {}; // los cables no se seleccionan (de momento)
+    this.mesh.raycast = () => {}; // los cables no se seleccionan
+
+    // Marca de corte en el punto medio, visible solo con el cable desconectado
+    const el = document.createElement('div');
+    el.innerHTML = '<span class="cable-break" title="Cable desconectado">×</span>';
+    this.breakMark = new CSS2DObject(el);
+    this.breakMark.position.copy(this.curve.getPointAt(0.5));
+    this.breakMark.visible = false;
+    this.mesh.add(this.breakMark);
+  }
+
+  setUp(up) {
+    this.material.color.copy(up ? this.color : DISCONNECTED);
+    this.material.emissiveIntensity = up ? 0.12 : 0;
+    this.breakMark.visible = !up;
   }
 
   // Posición a lo largo del cable (t de 0 a 1) en el sentido de recorrido:

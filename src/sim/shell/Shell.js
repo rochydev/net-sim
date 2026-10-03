@@ -41,6 +41,10 @@ export class Shell {
   async *run(deviceId, line, { signal } = {}) {
     const [name, ...args] = tokenize(line);
     if (!name) return;
+    if (!this.sim.engine.device(deviceId).up) {
+      yield '(El equipo está apagado: no responde)';
+      return;
+    }
 
     const command = COMMANDS[name.toLowerCase().replace(/\.exe$/, '')];
     if (!command) {
