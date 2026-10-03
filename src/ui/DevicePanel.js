@@ -7,7 +7,7 @@ import { icon, DEVICE_ICONS } from './icons.js';
 // Lee el estado del motor (no la topología estática) para reflejar cambios en vivo:
 // IPs obtenidas por DHCP, equipos caídos, políticas activadas, concesiones...
 export class DevicePanel {
-  constructor(element, engine, { onClose, onOpenTerminal, onTogglePolicy } = {}) {
+  constructor(element, engine, { onClose, onOpenTerminal, onTogglePolicy, onTogglePower, onToggleLink } = {}) {
     this.el = element;
     this.engine = engine;
     this.topology = engine.topology;
@@ -17,6 +17,9 @@ export class DevicePanel {
       const action = event.target.closest('[data-action]')?.dataset.action;
       if (action === 'close') onClose?.();
       if (action === 'terminal') onOpenTerminal?.(this.deviceId);
+      if (action === 'power') onTogglePower?.(this.deviceId);
+      const link = event.target.closest('[data-link]');
+      if (link) onToggleLink?.(link.dataset.link);
     });
     this.el.addEventListener('change', (event) => {
       const toggle = event.target.closest('[data-policy]');
@@ -65,7 +68,14 @@ export class DevicePanel {
       </header>
       <div class="panel__meta">
         <span class="status ${state.up ? '' : 'is-down'}">${state.up ? 'En línea' : 'Sin servicio'}</span>
-        ${canRunShell(state) ? `<button type="button" class="button" data-action="terminal">${icon('terminal', 14)}Abrir terminal</button>` : ''}
+        <span class="panel__actions">
+          ${canRunShell(state) && state.up ? `<button type="button" class="button" data-action="terminal">${icon('terminal', 14)}Terminal</button>` : ''}
+          ${
+            state.type === 'cloud'
+              ? ''
+              : `<button type="button" class="button ${state.up ? 'button--danger' : ''}" data-action="power">${icon('power', 14)}${state.up ? 'Apagar' : 'Encender'}</button>`
+          }
+        </span>
       </div>
       ${this.#body(state, vlan)}
       ${this.#links(device)}
@@ -174,7 +184,14 @@ export class DevicePanel {
           : link.mode === 'wan'
             ? '<span class="chip chip--wan">WAN</span>'
             : this.#vlanChip(link.vlan);
-      return [mono(own.port), `${peer.name}<small>${other.port}</small>`, mode];
+      const up = this.engine.isLinkUp(link.id);
+      const plug = `<button type="button" class="icon-button" data-link="${link.id}" title="${up ? 'Desconectar' : 'Conectar'} el cable" aria-label="${up ? 'Desconectar' : 'Conectar'} el cable de ${own.port}">${icon(up ? 'unplug' : 'plug', 14)}</button>`;
+      return [
+        mono(own.port),
+        `${peer.name}<small>${other.port}</small>`,
+        up ? mode : '<span class="chip chip--deny">Desconectado</span>',
+        plug,
+      ];
     });
     return section(device.type === 'switch' ? 'Puertos' : 'Enlaces', table(rows));
   }

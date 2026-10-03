@@ -25,6 +25,7 @@ describe('escenarios', () => {
       select: () => {},
       setPolicyEnabled: (id, policy, enabled) => sim.setPolicyEnabled(id, policy, enabled),
       setDeviceUp: (id, up) => sim.setDeviceUp(id, up),
+      setLinkUp: (id, up) => sim.setLinkUp(id, up),
       setServiceRunning: (id, service, running) => sim.setServiceRunning(id, service, running),
       note: () => {},
       wait: (ms) => sim.wait(ms),
@@ -93,6 +94,38 @@ describe('escenarios', () => {
     const fw = sim.engine.device('fw');
     expect(fw.policies.find((p) => p.id === 5)).toMatchObject({ enabled: false, hits: 2 });
     expect(fw.implicitDenyHits).toBe(2);
+  });
+
+  it('averías: medios desconectados, error general, switch caído y recuperación', async () => {
+    await run('breakage');
+    const text = output.join('\n');
+    expect(text).toMatch(/Estado de los medios[ .]+: medios desconectados/);
+    expect(output).toContain('PING: error en la transmisión. Error general.');
+    expect(output.filter((l) => l === 'Respuesta desde 192.168.10.102: Host de destino inaccesible.')).toHaveLength(2);
+    expect(output.filter((l) => l.startsWith('Respuesta desde 192.168.10.1:'))).toHaveLength(2);
+  });
+
+  describe('modo guiado', () => {
+    beforeEach(() => (runner.guided = true));
+
+    it('espera a next() antes de cada paso salvo el primero', async () => {
+      const shown = [];
+      runner.events.on('step', ({ index }) => shown.push(index));
+      runner.events.on('waiting', () => setTimeout(() => runner.next(), 0));
+      await run('ping');
+      expect(shown).toEqual([0, 1, 2]);
+    });
+
+    it('stop() termina el escenario sin ejecutar los pasos pendientes', async () => {
+      const shown = [];
+      let ended;
+      runner.events.on('step', ({ index }) => shown.push(index));
+      runner.events.on('waiting', () => runner.stop());
+      runner.events.on('end', (info) => (ended = info));
+      await run('dhcp');
+      expect(shown).toEqual([0]);
+      expect(ended.stopped).toBe(true);
+    });
   });
 
   it('no deja lanzar un escenario mientras otro está en curso', async () => {

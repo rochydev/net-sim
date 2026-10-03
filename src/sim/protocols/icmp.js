@@ -15,7 +15,8 @@ export async function echo(sim, srcId, dstIp, { ttl, seq = 1 } = {}) {
   const { engine } = sim;
   const iface = engine.device(srcId).ifaces[0];
 
-  const nextHop = engine.nextHopIp(srcId, dstIp);
+  // Sin cable o sin puerta de enlace, Windows ni siquiera llega a enviar: "Error general"
+  const nextHop = engine.mediaConnected(srcId) && engine.nextHopIp(srcId, dstIp);
   if (!nextHop) return { status: 'no-route' };
 
   // Si nadie responde al ARP, Windows contesta en nombre propio: "host de destino inaccesible"

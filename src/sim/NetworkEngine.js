@@ -35,6 +35,7 @@ export class NetworkEngine {
 
   // Vuelve al estado inicial de la topología: equipos encendidos, cachés y sesiones vacías
   reset() {
+    this.linksDown = new Set();
     this.devices = new Map(this.topology.devices.map((d) => [d.id, createDeviceState(d, this.topology.links)]));
 
     // Los equipos configurados por DHCP ya tienen concesión al arrancar la simulación
@@ -71,6 +72,22 @@ export class NetworkEngine {
   }
 
   // Siguiente salto IP desde un host: el propio destino si está en su subred, si no la puerta de enlace
+  setLinkUp(linkId, up) {
+    if (up) this.linksDown.delete(linkId);
+    else this.linksDown.add(linkId);
+  }
+
+  isLinkUp(linkId) {
+    return !this.linksDown.has(linkId);
+  }
+
+  // ¿Tiene el equipo su tarjeta conectada a un cable que funciona? (el "medio" de Windows)
+  mediaConnected(deviceId) {
+    const port = this.device(deviceId).ifaces[0]?.port;
+    const link = port && this.#linkOf(deviceId, port);
+    return Boolean(link) && this.isLinkUp(link.id);
+  }
+
   nextHopIp(deviceId, dstIp) {
     const iface = this.device(deviceId).ifaces[0];
     if (!iface?.ip) return null;
@@ -121,6 +138,7 @@ export class NetworkEngine {
 
   // La trama atraviesa un cable y llega al equipo del otro extremo
   #cross(node, frame, fromId, link, vlan) {
+    if (!this.isLinkUp(link.id)) return node.end('dropped', 'Cable desconectado');
     // En un puerto de acceso manda la VLAN del puerto, no la que crea tener el equipo
     const frameVlan = link.mode === 'access' ? link.vlan : vlan;
     const peer = otherEnd(link, fromId);
@@ -155,7 +173,9 @@ export class NetworkEngine {
       if (!frame.isBroadcast) return;
     }
 
-    const candidates = this.links.filter((l) => l !== ingress && touches(l, sw.id) && carries(l, vlan));
+    const candidates = this.links.filter(
+      (l) => l !== ingress && this.isLinkUp(l.id) && touches(l, sw.id) && carries(l, vlan),
+    );
     let egress = frame.isBroadcast ? candidates : candidates.filter((l) => this.#leadsTo(l, sw.id, frame.dstMac, vlan));
     // Unicast desconocido: el switch lo inunda por toda la VLAN, igual que un broadcast
     if (!egress.length && !frame.isBroadcast) egress = candidates;
@@ -171,7 +191,12 @@ export class NetworkEngine {
     if (peer.role !== 'switch' || seen.has(peer.id)) return false;
     seen.add(peer.id);
     return this.links.some(
-      (l) => l !== link && touches(l, peer.id) && carries(l, vlan) && this.#leadsTo(l, peer.id, mac, vlan, seen),
+      (l) =>
+        l !== link &&
+        this.isLinkUp(l.id) &&
+        touches(l, peer.id) &&
+        carries(l, vlan) &&
+        this.#leadsTo(l, peer.id, mac, vlan, seen),
     );
   }
 

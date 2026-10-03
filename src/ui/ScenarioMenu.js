@@ -19,7 +19,11 @@ export class ScenarioMenu {
           .join('')}
       </ul>
       <div class="scenarios__footer">
-        <span>Cada escenario parte de la red en su estado inicial.</span>
+        <label class="toggle" title="Pausa antes de cada paso hasta pulsar «Siguiente paso»">
+          <input type="checkbox" data-action="guided" />
+          <span class="toggle__track"></span>
+          <span>Paso a paso</span>
+        </label>
         <button type="button" class="link-button" data-action="reset">${icon('reset', 13)}Restablecer red</button>
       </div>
     `;
@@ -28,6 +32,9 @@ export class ScenarioMenu {
       const run = event.target.closest('[data-run]');
       if (run) runner.run(scenarios.find((s) => s.id === run.dataset.run));
       if (event.target.closest('[data-action="reset"]')) onReset();
+    });
+    this.el.querySelector('[data-action="guided"]').addEventListener('change', (event) => {
+      runner.guided = event.target.checked;
     });
 
     runner.events.on('start', (scenario) => this.#setRunning(scenario));
@@ -38,6 +45,6 @@ export class ScenarioMenu {
     for (const item of this.el.querySelectorAll('.scenario')) {
       item.classList.toggle('is-running', item.dataset.id === scenario?.id);
     }
-    this.el.querySelectorAll('button').forEach((b) => (b.disabled = Boolean(scenario)));
+    this.el.querySelectorAll('button, input').forEach((control) => (control.disabled = Boolean(scenario)));
   }
 }

@@ -42,6 +42,12 @@ const panel = new DevicePanel(document.getElementById('device-panel'), sim.engin
       enabled ? 'success' : 'warning',
     );
   },
+  onTogglePower: (deviceId) => {
+    const up = !sim.engine.device(deviceId).up;
+    sim.setDeviceUp(deviceId, up);
+    effects.note(deviceId, up ? 'Equipo encendido' : 'Equipo apagado', up ? 'success' : 'danger');
+  },
+  onToggleLink: (linkId) => sim.setLinkUp(linkId, !sim.engine.isLinkUp(linkId)),
   onOpenTerminal: (deviceId) => {
     terminal.setDevice(deviceId);
     dock.select('terminal');
@@ -64,9 +70,11 @@ const runner = new ScenarioRunner({
   select: (deviceId) => view.select(deviceId),
   setPolicyEnabled: (deviceId, policyId, enabled) => sim.setPolicyEnabled(deviceId, policyId, enabled),
   setDeviceUp: (deviceId, up) => sim.setDeviceUp(deviceId, up),
+  setLinkUp: (linkId, up) => sim.setLinkUp(linkId, up),
   setServiceRunning: (deviceId, service, running) => sim.setServiceRunning(deviceId, service, running),
   note: (deviceId, text, tone) => effects.note(deviceId, text, tone),
   wait: (ms) => sim.wait(ms),
+  abort: () => terminal.abort(),
 });
 runner.events.on('start', () => terminal.setLocked(true));
 runner.events.on('end', () => terminal.setLocked(false));
@@ -92,7 +100,14 @@ const syncDevice = (id) => {
   panel.refresh(id);
 };
 sim.events.on('device', ({ id }) => syncDevice(id));
-sim.events.on('reset', () => view.devices.forEach((_, id) => syncDevice(id)));
+sim.events.on('link', ({ id }) => {
+  view.cables.get(id).setUp(sim.engine.isLinkUp(id));
+  panel.refresh();
+});
+sim.events.on('reset', () => {
+  view.devices.forEach((_, id) => syncDevice(id));
+  view.cables.forEach((cable) => cable.setUp(true));
+});
 
 view.events.on('select', (id) => {
   if (!id) return panel.hide();
